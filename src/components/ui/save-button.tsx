@@ -11,25 +11,19 @@ export const SaveButton = () => {
     setIsSaving(true);
 
     try {
-      // Collect all data from localStorage
-      const students = JSON.parse(localStorage.getItem('musicSystem_students') || '[]');
-      const lessons = JSON.parse(localStorage.getItem('musicSystem_lessons') || '[]');
-      const payments = JSON.parse(localStorage.getItem('musicSystem_payments') || '[]');
-      const swapRequests = JSON.parse(localStorage.getItem('musicSystem_swapRequests') || '[]');
-      const files = JSON.parse(localStorage.getItem('musicSystem_files') || '[]');
-      const scheduleTemplates = JSON.parse(localStorage.getItem('musicSystem_scheduleTemplates') || '[]');
-      const integrationSettings = JSON.parse(localStorage.getItem('musicSystem_integrationSettings') || '{}');
-
-      const backupData = {
-        students,
-        lessons,
-        payments,
-        swapRequests,
-        files,
-        scheduleTemplates,
-        integrationSettings,
-        timestamp: new Date().toISOString()
-      };
+      // Collect ALL data from localStorage (full backup)
+      const backupData: Record<string, any> = {};
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          try {
+            backupData[key] = JSON.parse(localStorage.getItem(key) || '');
+          } catch {
+            backupData[key] = localStorage.getItem(key);
+          }
+        }
+      }
 
       // 1. Save to Dropbox via Worker
       const cloudResult = await workerApi.saveData(backupData);
@@ -38,16 +32,10 @@ export const SaveButton = () => {
         throw new Error('שגיאה בשמירה לדרופבוקס');
       }
 
-      // 2. Download local backup file
+      // 2. Download local backup file (BACKUP format)
       const now = new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      const day = now.getDate().toString().padStart(2, '0');
-      const hour = now.getHours().toString().padStart(2, '0');
-      const minute = now.getMinutes().toString().padStart(2, '0');
-      
-      const timestamp = `${year}${month}${day}${hour}${minute}`;
-      const filename = `סונטה${timestamp}.json`;
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      const filename = `sonata-backup-${timestamp}.json`;
 
       const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
