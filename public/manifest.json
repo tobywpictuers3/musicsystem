@@ -1,0 +1,28 @@
+{
+  "name": "מערכת שיעורי נגינה - סונטה",
+  "short_name": "סונטה",
+  "description": "מערכת ניהול שיעורי נגינה של טובי וינברג",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a14",
+  "theme_color": "#d4af37",
+  "orientation": "portrait-primary",
+  "dir": "rtl",
+  "lang": "he",
+  "icons": [
+    {
+      "src": "/lovable-uploads/927cfa3a-499f-41be-88c0-71a5351d7335.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/lovable-uploads/927cfa3a-499f-41be-88c0-71a5351d7335.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "music"],
+  "screenshots": []
+}

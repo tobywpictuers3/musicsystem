@@ -329,4 +329,32 @@
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--accent));
   }
+
+  /* Print-only styles - clean reports without design elements */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+
+    body {
+      background: white !important;
+      color: black !important;
+    }
+
+    * {
+      background: transparent !important;
+      color: black !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+    }
+
+    a, a:visited {
+      text-decoration: underline;
+    }
+
+    .card, .card-gradient, .musical-gradient {
+      border: 1px solid #ddd !important;
+      box-shadow: none !important;
+    }
+  }
 }

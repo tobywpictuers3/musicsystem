@@ -3,7 +3,6 @@ import { FileDown } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import blankTemplate from '@/assets/blank-template.jpg';
 
 interface PrintPDFButtonProps {
   contentId?: string;
@@ -20,16 +19,38 @@ export const PrintPDFButton = ({ contentId = 'main-content', filename, tabName }
         description: 'מייצא לPDF...',
       });
 
-      // Create canvas from content (in grayscale)
+      // Hide buttons and non-printable elements
+      const noPrintElements = element.querySelectorAll('button, .no-print');
+      noPrintElements.forEach((el) => {
+        (el as HTMLElement).style.display = 'none';
+      });
+
+      // Get full scrollable content height
+      const fullHeight = Math.max(
+        element.scrollHeight,
+        element.offsetHeight,
+        element.clientHeight
+      );
+
+      // Create canvas from full content (clean, no colors)
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         logging: false,
         windowWidth: element.scrollWidth,
-        windowHeight: element.scrollHeight
+        windowHeight: fullHeight,
+        backgroundColor: '#ffffff',
+        ignoreElements: (el) => {
+          return el.tagName === 'BUTTON' || el.classList.contains('no-print');
+        }
       });
 
-      // Convert to grayscale
+      // Restore hidden elements
+      noPrintElements.forEach((el) => {
+        (el as HTMLElement).style.display = '';
+      });
+
+      // Convert to grayscale for clean report
       const ctx = canvas.getContext('2d');
       if (ctx) {
         const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -52,42 +73,47 @@ export const PrintPDFButton = ({ contentId = 'main-content', filename, tabName }
 
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const contentHeight = (canvas.height * pageWidth) / canvas.width;
-      const totalPages = Math.ceil(contentHeight / pageHeight);
+      const margin = 10;
+      const printableWidth = pageWidth - (margin * 2);
+      const printableHeight = pageHeight - (margin * 2);
+      
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgWidth / printableWidth;
+      const contentHeight = imgHeight / ratio;
+      
+      let heightLeft = contentHeight;
+      let position = 0;
 
-      // Add pages with blank template background
-      for (let page = 0; page < totalPages; page++) {
-        if (page > 0) {
+      // Add pages with content only (no background template)
+      while (heightLeft > 0) {
+        if (position > 0) {
           pdf.addPage();
         }
 
-        // Add blank template background
-        pdf.addImage(blankTemplate, 'JPEG', 0, 0, pageWidth, pageHeight);
-
-        // Add content (cropped for this page)
-        const yOffset = -page * pageHeight;
-        const sourceY = (page * pageHeight * canvas.width) / pageWidth;
-        const sourceHeight = Math.min((pageHeight * canvas.width) / pageWidth, canvas.height - sourceY);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = imgWidth;
+        const currentHeight = Math.min(printableHeight * ratio, imgHeight - position * ratio);
+        pageCanvas.height = currentHeight;
         
-        if (sourceHeight > 0) {
-          // Create a cropped canvas for this page
-          const croppedCanvas = document.createElement('canvas');
-          croppedCanvas.width = canvas.width;
-          croppedCanvas.height = sourceHeight;
-          const croppedCtx = croppedCanvas.getContext('2d');
+        const pageCtx = pageCanvas.getContext('2d');
+        if (pageCtx) {
+          pageCtx.fillStyle = '#ffffff';
+          pageCtx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
           
-          if (croppedCtx) {
-            croppedCtx.drawImage(
-              canvas,
-              0, sourceY, canvas.width, sourceHeight,
-              0, 0, canvas.width, sourceHeight
-            );
-            
-            const croppedImgData = croppedCanvas.toDataURL('image/png');
-            const croppedHeight = (sourceHeight * pageWidth) / canvas.width;
-            pdf.addImage(croppedImgData, 'PNG', 10, 20, pageWidth - 20, croppedHeight, '', 'FAST');
-          }
+          pageCtx.drawImage(
+            canvas,
+            0, position * ratio, imgWidth, currentHeight,
+            0, 0, imgWidth, currentHeight
+          );
+          
+          const pageImgData = pageCanvas.toDataURL('image/png');
+          const h = Math.min(printableHeight, heightLeft);
+          pdf.addImage(pageImgData, 'PNG', margin, margin, printableWidth, h, '', 'FAST');
         }
+
+        heightLeft -= printableHeight;
+        position += printableHeight;
       }
 
       // Generate filename with tab name and current date/time

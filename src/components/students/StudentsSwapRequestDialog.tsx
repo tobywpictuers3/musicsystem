@@ -35,12 +35,6 @@ const StudentsSwapRequestDialog = ({ open, onOpenChange, selectedLesson }: Stude
       return;
     }
 
-    console.log('Swap - All students:', students.map(s => ({ 
-      name: `${s.firstName} ${s.lastName}`, 
-      personalCode: s.personalCode,
-      phone: s.phone 
-    })));
-    console.log('Swap - Looking for personalCode:', personalCode.trim());
 
     // Try to find by personalCode first
     let student = students.find(s => s.personalCode === personalCode.trim());
@@ -48,9 +42,6 @@ const StudentsSwapRequestDialog = ({ open, onOpenChange, selectedLesson }: Stude
     // Fallback: if personalCode is empty or not found, try phone (backward compatibility)
     if (!student) {
       student = students.find(s => s.phone === personalCode.trim());
-      if (student) {
-        console.log('Swap - Found student by phone (backward compatibility)');
-      }
     }
     
     if (!student) {

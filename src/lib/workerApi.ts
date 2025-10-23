@@ -18,15 +18,15 @@ export const workerApi = {
 
       if (!response.ok) {
         const text = await response.text();
-        console.error("❌ Dropbox worker response error:", text);
+        console.info("Dropbox save failed");
         return { success: false, error: text };
       }
 
       const result = await response.json();
-      console.log("✅ Dropbox worker response:", result);
+      console.info("Data saved to Dropbox");
       return { success: true, data: result };
     } catch (error) {
-      console.error("❌ Failed to reach Dropbox worker:", error);
+      console.info("Failed to reach Dropbox");
       return { success: false, error: (error as Error).message };
     }
   },
@@ -48,15 +48,15 @@ export const workerApi = {
 
       if (!response.ok) {
         const text = await response.text();
-        console.error("❌ Dropbox worker load error:", text);
+        console.info("Dropbox load failed");
         return { success: false, error: text };
       }
 
       const result = await response.json();
-      console.log("✅ Dropbox worker loaded:", result);
+      console.info("Data loaded from Dropbox");
       return { success: true, data: result };
     } catch (error) {
-      console.error("❌ Failed to load from Dropbox worker:", error);
+      console.info("Failed to load from Dropbox");
       return { success: false, error: (error as Error).message };
     }
   },

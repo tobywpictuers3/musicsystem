@@ -15,14 +15,28 @@ root.innerHTML = `
   </div>
 `;
 
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').then(
+      (registration) => {
+        console.info('ServiceWorker registered');
+      },
+      (error) => {
+        console.info('ServiceWorker registration failed');
+      }
+    );
+  });
+}
+
 // Load data from Dropbox before starting the app
 async function initializeApp() {
   try {
-    console.log('🚀 Starting app initialization...');
+    console.info('Starting app initialization...');
     await syncManager.loadDataOnInit();
-    console.log('✅ Data loaded successfully, rendering app...');
+    console.info('Data loaded successfully');
   } catch (error) {
-    console.error('⚠️ Error loading data, continuing with local data:', error);
+    console.info('Continuing with local data');
   } finally {
     createRoot(root).render(<App />);
   }

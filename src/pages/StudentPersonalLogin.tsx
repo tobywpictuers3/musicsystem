@@ -24,12 +24,6 @@ const StudentPersonalLogin = () => {
     }
 
     const students = getStudents();
-    console.log('All students:', students.map(s => ({ 
-      name: `${s.firstName} ${s.lastName}`, 
-      personalCode: s.personalCode,
-      phone: s.phone 
-    })));
-    console.log('Looking for personalCode:', personalCode.trim());
     
     // Try to find by personalCode first
     let student = students.find(s => s.personalCode === personalCode.trim());
@@ -37,9 +31,6 @@ const StudentPersonalLogin = () => {
     // Fallback: if personalCode is empty or not found, try phone (backward compatibility)
     if (!student) {
       student = students.find(s => s.phone === personalCode.trim());
-      if (student) {
-        console.log('Found student by phone (backward compatibility)');
-      }
     }
     
     if (student) {
