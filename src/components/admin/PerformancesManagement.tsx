@@ -149,27 +149,6 @@ const PerformancesManagement = () => {
       toast({ description: 'ההופעה נוספה בהצלחה' });
     }
 
-    // Send to Google Calendar
-    const description = [
-      formData.client && `לקוח: ${formData.client}`,
-      formData.clientPhone && `טלפון: ${formData.clientPhone}`,
-      formData.orderContent && `תוכן: ${formData.orderContent}`,
-      formData.amount && `סכום: ₪${formData.amount}`,
-      formData.notes && `הערות: ${formData.notes}`
-    ].filter(Boolean).join('\n');
-
-    await syncManager.sendCalendarEvent({
-      type: 'calendar_event',
-      category: 'עבודה',
-      sub_category: 'הופעות',
-      title: formData.name,
-      date: formData.date,
-      time: formData.timeEstimate || '00:00',
-      description,
-      action: isUpdate ? 'update' : 'create',
-      eventId: editingPerformance?.id
-    });
-
     loadData();
     setShowEventDialog(false);
   };
@@ -181,20 +160,6 @@ const PerformancesManagement = () => {
       deletePerformance(id);
       loadData();
       toast({ description: 'ההופעה נמחקה' });
-
-      // Send to Google Calendar
-      if (performance) {
-        await syncManager.sendCalendarEvent({
-          type: 'calendar_event',
-          category: 'עבודה',
-          sub_category: 'הופעות',
-          title: performance.name,
-          date: performance.date,
-          time: performance.timeEstimate || '00:00',
-          action: 'delete',
-          eventId: id
-        });
-      }
     }
   };
 

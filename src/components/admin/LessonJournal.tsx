@@ -299,18 +299,6 @@ const LessonJournal = () => {
       deleteLesson(lesson.id);
     }
     
-    // Send to Google Calendar
-    await syncManager.sendCalendarEvent({
-      type: 'calendar_event',
-      category: 'עבודה',
-      sub_category: 'תלמידות',
-      title: studentName,
-      date: lesson.date,
-      time: lesson.startTime,
-      action: 'delete',
-      eventId: lesson.id
-    });
-    
     loadData();
     toast({ description: 'השיעור נמחק לצמיתות' });
   };
@@ -425,18 +413,6 @@ const LessonJournal = () => {
       setUndoStack([...undoStack, { action: 'delete', data: lesson }]);
       deleteLesson(editingLesson.id);
       
-      // Send delete to Google Calendar
-      await syncManager.sendCalendarEvent({
-        type: 'calendar_event',
-        category: 'עבודה',
-        sub_category: 'תלמידות',
-        title: studentName,
-        date: editingLesson.date,
-        time: editingLesson.startTime,
-        action: 'delete',
-        eventId: editingLesson.id
-      });
-      
       toast({ description: 'השיעור נמחק לצמיתות (כולל המיספור)' });
     } else {
       setUndoStack([...undoStack, { action: 'update', data: lesson }]);
@@ -445,19 +421,6 @@ const LessonJournal = () => {
       
       updateLesson(editingLesson.id, {
         notes: currentNotes ? `${currentNotes}\n${newNote}` : newNote
-      });
-      
-      // Send update to Google Calendar
-      await syncManager.sendCalendarEvent({
-        type: 'calendar_event',
-        category: 'עבודה',
-        sub_category: 'תלמידות',
-        title: studentName,
-        date: editingLesson.date,
-        time: editingLesson.startTime,
-        description: `שיעור עם ${studentName} - ${newNote}`,
-        action: 'update',
-        eventId: editingLesson.id
       });
       
       toast({ description: 'בנק הזמן עודכן' });
@@ -481,19 +444,6 @@ const LessonJournal = () => {
     updateLesson(editingLesson.id, {
       startTime: editedTime,
       endTime
-    });
-
-    // Send update to Google Calendar
-    await syncManager.sendCalendarEvent({
-      type: 'calendar_event',
-      category: 'עבודה',
-      sub_category: 'תלמידות',
-      title: studentName,
-      date: editingLesson.date,
-      time: editedTime,
-      description: `שיעור עם ${studentName}`,
-      action: 'update',
-      eventId: editingLesson.id
     });
 
     setShowEditTimeDialog(false);

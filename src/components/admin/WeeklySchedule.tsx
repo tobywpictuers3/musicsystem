@@ -204,19 +204,6 @@ const WeeklySchedule = () => {
       });
     }
 
-    // Send to Google Calendar
-    await syncManager.sendCalendarEvent({
-      type: 'calendar_event',
-      category: 'עבודה',
-      sub_category: 'תלמידות',
-      title: studentName,
-      date: editingLesson.date,
-      time: editingLesson.startTime,
-      description: `שיעור עם ${studentName}`,
-      action: isUpdate ? 'update' : 'create',
-      eventId: lessonData.id
-    });
-
     setIsEditDialogOpen(false);
     setEditingLesson(null);
   };
@@ -239,20 +226,6 @@ const WeeklySchedule = () => {
       title: 'הצלחה',
       description: 'השיעור נמחק בהצלחה'
     });
-
-    // Send to Google Calendar
-    if (lesson) {
-      await syncManager.sendCalendarEvent({
-        type: 'calendar_event',
-        category: 'עבודה',
-        sub_category: 'תלמידות',
-        title: getStudentName(lesson.studentId),
-        date: lesson.date,
-        time: lesson.startTime,
-        action: 'delete',
-        eventId: lessonId
-      });
-    }
   };
 
   const handleConvertTemplateLesson = (templateLesson: Lesson) => {

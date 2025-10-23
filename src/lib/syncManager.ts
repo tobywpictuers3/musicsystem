@@ -14,35 +14,16 @@ interface SyncManager {
   startPeriodicBackup: () => void;
   stopPeriodicBackup: () => void;
   
-  // Google Calendar integration
-  sendCalendarEvent: (eventData: CalendarEventData) => Promise<void>;
-  startCalendarSync: () => void;
-  stopCalendarSync: () => void;
-}
-
-interface CalendarEventData {
-  type: 'calendar_event';
-  category: 'עבודה';
-  sub_category: 'תלמידות' | 'הופעות';
-  title: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:MM
-  description?: string;
-  action: 'create' | 'update' | 'delete';
-  eventId?: string;
 }
 
 class SyncManagerImpl implements SyncManager {
   private backupInterval: NodeJS.Timeout | null = null;
-  private calendarSyncInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     // Setup automatic backup on app close (including unexpected close)
     this.setupAppCloseBackup();
     // Start periodic backup (every 30 minutes)
     this.startPeriodicBackup();
-    // Start calendar sync (every 30 minutes)
-    this.startCalendarSync();
   }
 
   // Load data from Cloudflare Worker using workerApi
@@ -64,7 +45,7 @@ class SyncManagerImpl implements SyncManager {
         return null;
       }
       
-      console.log('✅ Data successfully loaded from Cloudflare Worker');
+      console.info('Data loaded from Worker');
       return data;
     } catch (error) {
       console.error('Failed to load from Worker:', error);
@@ -81,7 +62,7 @@ class SyncManagerImpl implements SyncManager {
         throw new Error('Worker upload failed');
       }
 
-      console.log('✅ Data successfully saved to Cloudflare Worker');
+      console.info('Data saved to Worker');
       return true;
     } catch (error) {
       console.error('Failed to save to Worker:', error);
@@ -138,7 +119,7 @@ class SyncManagerImpl implements SyncManager {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      console.log(`Local backup created: ${filename}`);
+      
     } catch (error) {
       console.error('Failed to create local backup:', error);
     }
@@ -152,7 +133,6 @@ class SyncManagerImpl implements SyncManager {
 
     // Set up 30-minute interval - save to Dropbox only (no local download)
     this.backupInterval = setInterval(() => {
-      console.log('Performing scheduled 30-minute Dropbox backup...');
       this.autoSaveToWorker();
     }, 30 * 60 * 1000);
   }
@@ -165,7 +145,6 @@ class SyncManagerImpl implements SyncManager {
   }
 
   onSwapRequestReceived(): void {
-    console.log('Swap request received - triggering automatic Dropbox backup...');
     this.autoSaveToWorker();
   }
 
@@ -208,7 +187,7 @@ class SyncManagerImpl implements SyncManager {
         await this.autoSaveToWorker();
         break;
       default:
-        console.log('Unknown user action:', action);
+        break;
     }
   }
 
@@ -254,7 +233,7 @@ class SyncManagerImpl implements SyncManager {
       if (data.scheduleTemplates) localStorage.setItem('musicSystem_scheduleTemplates', JSON.stringify(data.scheduleTemplates));
       if (data.integrationSettings) localStorage.setItem('musicSystem_integrationSettings', JSON.stringify(data.integrationSettings));
       
-      console.log('Backup imported successfully');
+      
       return true;
     } catch (error) {
       console.error('Failed to import backup:', error);
@@ -297,77 +276,6 @@ class SyncManagerImpl implements SyncManager {
     }
   }
 
-  // Google Calendar Integration (currently disabled - can be implemented later)
-  async sendCalendarEvent(eventData: CalendarEventData): Promise<void> {
-    console.log('Calendar events not implemented yet:', eventData);
-  }
-
-  private async syncFromCalendar(): Promise<void> {
-    try {
-      console.log('Calendar sync not implemented yet - feature disabled');
-    } catch (error) {
-      console.error('Failed to sync from calendar:', error);
-    }
-  }
-
-  private mergeLessonsFromCalendar(currentLessons: any[], calendarLessons: any[]): any[] {
-    // Simple merge logic - can be enhanced based on requirements
-    const merged = [...currentLessons];
-    
-    calendarLessons.forEach(calLesson => {
-      const existingIndex = merged.findIndex(l => l.id === calLesson.id);
-      if (existingIndex >= 0) {
-        // Update existing
-        merged[existingIndex] = { ...merged[existingIndex], ...calLesson };
-      } else {
-        // Add new
-        merged.push(calLesson);
-      }
-    });
-    
-    return merged;
-  }
-
-  private mergePerformancesFromCalendar(currentPerformances: any[], calendarPerformances: any[]): any[] {
-    // Simple merge logic - can be enhanced based on requirements
-    const merged = [...currentPerformances];
-    
-    calendarPerformances.forEach(calPerf => {
-      const existingIndex = merged.findIndex(p => p.id === calPerf.id);
-      if (existingIndex >= 0) {
-        // Update existing
-        merged[existingIndex] = { ...merged[existingIndex], ...calPerf };
-      } else {
-        // Add new
-        merged.push(calPerf);
-      }
-    });
-    
-    return merged;
-  }
-
-  startCalendarSync(): void {
-    // Clear existing interval if any
-    if (this.calendarSyncInterval) {
-      clearInterval(this.calendarSyncInterval);
-    }
-
-    // Set up 30-minute interval for calendar sync
-    this.calendarSyncInterval = setInterval(() => {
-      console.log('Performing scheduled calendar sync...');
-      this.syncFromCalendar();
-    }, 30 * 60 * 1000);
-
-    // Also sync immediately on start
-    this.syncFromCalendar();
-  }
-
-  stopCalendarSync(): void {
-    if (this.calendarSyncInterval) {
-      clearInterval(this.calendarSyncInterval);
-      this.calendarSyncInterval = null;
-    }
-  }
 }
 
 export const syncManager: SyncManager = new SyncManagerImpl();

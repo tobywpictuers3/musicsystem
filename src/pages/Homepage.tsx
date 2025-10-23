@@ -88,19 +88,15 @@ const Homepage = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Background Video */}
-      <video 
-        autoPlay 
-        loop 
-        muted 
-        playsInline
-        className="fixed inset-0 w-full h-full object-cover z-0"
-      >
-        <source src="/background-video.mp4" type="video/mp4" />
-      </video>
+      {/* Royal Static Background */}
+      <div className="fixed inset-0 z-0 royal-background">
+        <div className="absolute inset-0 bg-gradient-to-br from-background via-primary/20 to-secondary/30"></div>
+        <div className="absolute inset-0 shimmer-overlay"></div>
+        <div className="absolute inset-0 logo-pattern"></div>
+      </div>
       
       {/* Dark Overlay for Better Contrast */}
-      <div className="fixed inset-0 bg-black/40 z-[1]"></div>
+      <div className="fixed inset-0 bg-black/30 z-[1]"></div>
       
       <div className="relative z-10 container mx-auto p-4 space-y-8">
         {/* Header with Logo */}

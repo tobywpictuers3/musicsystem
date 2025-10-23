@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { getLessons } from '@/lib/storage';
 import { Student, Lesson } from '@/lib/types';
+import { calculateEnhancedLessonNumber } from '@/lib/lessonNumbering';
 
 interface LessonHistoryProps {
   student: Student;
@@ -13,6 +14,8 @@ interface LessonHistoryProps {
 
 interface LessonWithNumber extends Lesson {
   lessonNumber?: number;
+  isSkippedLesson?: boolean;
+  isBankTimeLesson?: boolean;
 }
 
 const LessonHistory = ({ student }: LessonHistoryProps) => {
@@ -21,52 +24,22 @@ const LessonHistory = ({ student }: LessonHistoryProps) => {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    const loadLessons = () => {
-      const currentDate = new Date().toISOString().split('T')[0];
-      const actualLessons = getLessons();
-      
-      // Get all lessons for this student (including future)
-      const studentLessons = actualLessons
-        .filter(l => 
-          l.studentId === student.id && 
-          l.date >= student.startDate &&
-          l.status !== 'cancelled' // Don't show cancelled lessons
-        )
-        .sort((a, b) => b.date.localeCompare(a.date)); // Most recent first
-      
-      // Calculate lesson numbers using the same logic as admin
-      const lessonsWithNumbers = studentLessons.map(lesson => {
-        if (lesson.status === 'completed') {
-          const lessonNumber = calculateLessonNumber(lesson.date, lesson.id);
-          return { ...lesson, lessonNumber };
-        }
-        return lesson;
+    const lessons = getLessons()
+      .filter(lesson => lesson.studentId === student.id)
+      .filter(lesson => lesson.status !== 'cancelled' && !lesson.notes?.includes('דילוג מיספור'))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .map((lesson) => {
+        const result = calculateEnhancedLessonNumber(student.id, lesson.date, lesson.id);
+        return {
+          ...lesson,
+          lessonNumber: result.lessonNumber,
+          isSkippedLesson: result.isSkippedLesson,
+          isBankTimeLesson: result.isBankTimeLesson
+        };
       });
-      
-      setAllLessons(lessonsWithNumbers);
-    };
-    
-    // This function matches exactly the admin's logic
-    const calculateLessonNumber = (lessonDate: string, lessonId?: string): number => {
-      const startDate = new Date(student.startDate);
-      const checkDate = new Date(lessonDate);
-      
-      if (checkDate < startDate) return 0;
 
-      const allLessons = getLessons();
-      const completedLessons = allLessons
-        .filter(l => l.studentId === student.id && l.status === 'completed' && new Date(l.date) <= checkDate)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      if (lessonId) {
-        const index = completedLessons.findIndex(l => l.id === lessonId);
-        return index >= 0 ? index + (student.startingLessonNumber || 1) : 0;
-      }
-
-      return completedLessons.length + (student.startingLessonNumber || 1);
-    };
-    
-    loadLessons();
+    setAllLessons(lessons);
+    setCurrentPage(1);
   }, [student]);
 
   const totalPages = Math.ceil(allLessons.length / itemsPerPage);
@@ -126,7 +99,18 @@ const LessonHistory = ({ student }: LessonHistoryProps) => {
                   return (
                     <TableRow key={lesson.id} className={isCompleted ? 'bg-blue-50 dark:bg-blue-950/20' : ''}>
                       <TableCell className={`font-medium ${isFuture ? 'text-muted-foreground' : isCompleted ? 'text-blue-800 dark:text-blue-300' : ''}`}>
-                        {lesson.lessonNumber ? `שיעור #${lesson.lessonNumber}` : '-'}
+                        {lesson.isSkippedLesson ? (
+                          <Badge variant="secondary">שיעור דולג</Badge>
+                        ) : lesson.lessonNumber ? (
+                          <div className="flex items-center gap-2">
+                            <span>שיעור #{lesson.lessonNumber}</span>
+                            {lesson.isBankTimeLesson && (
+                              <Badge variant="outline" className="text-xs">בנק זמן</Badge>
+                            )}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
                       </TableCell>
                       <TableCell className={isFuture ? 'text-muted-foreground' : isCompleted ? 'text-blue-800 dark:text-blue-300' : ''}>
                         {new Date(lesson.date).toLocaleDateString('he-IL')}

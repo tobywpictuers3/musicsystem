@@ -357,4 +357,55 @@
       box-shadow: none !important;
     }
   }
+
+  /* Royal Background for Homepage */
+  .royal-background {
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(var(--primary) / 0.3) 25%, 
+      hsl(var(--secondary) / 0.4) 50%, 
+      hsl(var(--primary) / 0.3) 75%, 
+      hsl(var(--background)) 100%
+    );
+    background-size: 400% 400%;
+    animation: royal-gradient 15s ease infinite;
+  }
+
+  @keyframes royal-gradient {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .shimmer-overlay {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--accent) / 0.1) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 8s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0%, 100% {
+      background-position: -200% 0;
+    }
+    50% {
+      background-position: 200% 0;
+    }
+  }
+
+  .logo-pattern {
+    background-image: url('/lovable-uploads/927cfa3a-499f-41be-88c0-71a5351d7335.png');
+    background-size: 300px 300px;
+    background-position: center;
+    background-repeat: repeat;
+    opacity: 0.03;
+    filter: brightness(1.5);
+  }
 }
