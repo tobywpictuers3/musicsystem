@@ -10,6 +10,7 @@ import { getPracticeSessions, addPracticeSession, getStudentPracticeSessions } f
 import { PracticeSession } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
+import { CelebrationToast } from './CelebrationToast';
 
 interface PracticeTrackingProps {
   studentId: string;
@@ -31,6 +32,7 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
   const [manualEndTime, setManualEndTime] = useState('');
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
   const [shownCongrats, setShownCongrats] = useState<Set<string>>(new Set());
+  const [activeCelebration, setActiveCelebration] = useState<{ message: string; medal: string } | null>(null);
 
   useEffect(() => {
     loadSessions();
@@ -169,11 +171,7 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
       colors: ['#FFD700', '#FFA500', '#FF6347']
     });
 
-    toast({
-      title: `${medal} מזל טוב!`,
-      description: message,
-      duration: 6000,
-    });
+    setActiveCelebration({ message, medal });
   };
 
   const handleStartTracking = () => {
@@ -286,7 +284,16 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+      {activeCelebration && (
+        <CelebrationToast
+          message={activeCelebration.message}
+          medal={activeCelebration.medal}
+          onClose={() => setActiveCelebration(null)}
+        />
+      )}
+      
+      <div className="space-y-6">
       {/* Quick Start/Stop */}
       <Card className="card-gradient">
         <CardHeader>
@@ -435,7 +442,8 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
           </Table>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   );
 };
 

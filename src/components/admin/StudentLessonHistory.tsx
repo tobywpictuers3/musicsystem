@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import LessonPracticeStats from './LessonPracticeStats';
 
 interface StudentLessonHistoryProps {
   student: Student;
@@ -189,41 +190,44 @@ const StudentLessonHistory = ({ student, open, onOpenChange }: StudentLessonHist
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2">
-                        <div className="flex flex-col gap-1">
-                          {lesson.grade ? (
-                            <>
-                              <Badge variant="secondary" className="text-sm w-fit">
-                                {lesson.grade}/5
-                              </Badge>
-                              {lesson.gradeNotes && (
-                                <p className="text-xs text-muted-foreground">{lesson.gradeNotes}</p>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => openGrading(lesson.id)}
-                            title="ערוך ציון"
-                          >
-                            <Star className="h-4 w-4" />
-                          </Button>
-                          {lesson.grade && (
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="flex flex-col gap-1">
+                            {lesson.grade ? (
+                              <>
+                                <Badge variant="secondary" className="text-sm w-fit">
+                                  {lesson.grade}/5
+                                </Badge>
+                                {lesson.gradeNotes && (
+                                  <p className="text-xs text-muted-foreground">{lesson.gradeNotes}</p>
+                                )}
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </div>
+                          <div className="flex gap-1">
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => setDeletingLesson(lesson.id)}
-                              title="מחק תיעוד"
+                              onClick={() => openGrading(lesson.id)}
+                              title="ערוך ציון"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Star className="h-4 w-4" />
                             </Button>
-                          )}
+                            {lesson.grade && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setDeletingLesson(lesson.id)}
+                                title="מחק תיעוד"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
+                        <LessonPracticeStats studentId={student.id} lesson={lesson} />
                       </div>
                     )}
                   </TableCell>

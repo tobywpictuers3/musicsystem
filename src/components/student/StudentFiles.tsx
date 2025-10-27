@@ -73,62 +73,67 @@ const StudentFiles = ({ studentId }: StudentFilesProps) => {
   return (
     <Card className="card-gradient card-shadow">
       <CardHeader>
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-2xl flex items-center gap-2">
-            <FileText className="h-6 w-6" />
-            הקלטות ותווים
-          </CardTitle>
-          <div className="flex gap-2">
-            <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-              <DialogTrigger asChild>
-                <Button variant="outline">
-                  <Upload className="h-4 w-4 mr-2" />
-                  העלאת קובץ
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>הוספת קובץ חדש</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="file-name">כותרת הקובץ</Label>
-                    <Input
-                      id="file-name"
-                      value={uploadForm.name}
-                      onChange={(e) => setUploadForm({...uploadForm, name: e.target.value})}
-                      placeholder="לדוגמה: תווים שיעור 5, הקלטה יד ימין"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="file-description">הסבר / תיאור (אופציונלי)</Label>
-                    <Input
-                      id="file-description"
-                      value={uploadForm.description}
-                      onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
-                      placeholder="הסבר קצר על הקובץ"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="file-url">קישור לקובץ</Label>
-                    <Input
-                      id="file-url"
-                      value={uploadForm.url}
-                      onChange={(e) => setUploadForm({...uploadForm, url: e.target.value})}
-                      placeholder="הדביקי כאן את הקישור לקובץ (Google Drive, Dropbox וכו')"
-                    />
-                  </div>
-                  <Button onClick={handleUpload} className="w-full hero-gradient">
-                    הוסף קובץ
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <FileText className="h-6 w-6" />
+              קבצים אישיים
+            </CardTitle>
+            <div className="flex gap-2">
+              <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+                <DialogTrigger asChild>
+                  <Button variant="outline">
+                    <Upload className="h-4 w-4 mr-2" />
+                    העלאת קובץ
                   </Button>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button onClick={handleRefresh} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              רענון קבצים
-            </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>הוספת קובץ חדש</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="file-name">כותרת הקובץ</Label>
+                      <Input
+                        id="file-name"
+                        value={uploadForm.name}
+                        onChange={(e) => setUploadForm({...uploadForm, name: e.target.value})}
+                        placeholder="לדוגמה: תווים שיעור 5, הקלטה יד ימין"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="file-description">הסבר / תיאור (אופציונלי)</Label>
+                      <Input
+                        id="file-description"
+                        value={uploadForm.description}
+                        onChange={(e) => setUploadForm({...uploadForm, description: e.target.value})}
+                        placeholder="הסבר קצר על הקובץ"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="file-url">קישור לקובץ</Label>
+                      <Input
+                        id="file-url"
+                        value={uploadForm.url}
+                        onChange={(e) => setUploadForm({...uploadForm, url: e.target.value})}
+                        placeholder="הדביקי כאן את הקישור לקובץ (Google Drive, Dropbox וכו')"
+                      />
+                    </div>
+                    <Button onClick={handleUpload} className="w-full hero-gradient">
+                      הוסף קובץ
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button onClick={handleRefresh} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                רענון קבצים
+              </Button>
+            </div>
           </div>
+          <p className="text-sm text-muted-foreground">
+            כאן תוכלי למצוא את כל החומרים שהמורה שלך שיתפה - הקלטות, תווים, וקבצים נוספים שיעזרו לך בתרגול
+          </p>
         </div>
       </CardHeader>
       <CardContent>
