@@ -186,8 +186,8 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
     }
   };
 
-  const showDurationCongrats = (totalMinutes: number) => {
-    const today = new Date().toISOString().split('T')[0];
+  const showDurationCongrats = (totalMinutes: number, dateForMedal?: string) => {
+    const targetDate = dateForMedal || new Date().toISOString().split('T')[0];
     const existingMedals = getStudentMedalRecords(studentId);
     
     let message = '';
@@ -196,35 +196,35 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
     
     if (totalMinutes >= 150) {
       level = 'diamond';
-      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today && m.level === 'diamond');
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === targetDate && m.level === 'diamond');
       if (!hasHigherMedal) {
         message = 'בלתי יאומן! 150 דקות אימון! את אלופה אמיתית! מגיעה לך מדליית יהלום!';
         medal = '💠';
       }
     } else if (totalMinutes >= 100) {
       level = 'platinum';
-      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today && (m.level === 'diamond' || m.level === 'platinum'));
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === targetDate && (m.level === 'diamond' || m.level === 'platinum'));
       if (!hasHigherMedal) {
         message = 'יוצא מן הכלל! 100 דקות אימון! מגיעה לך מדליית פלטינום!';
         medal = '💎';
       }
     } else if (totalMinutes >= 60) {
       level = 'gold';
-      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today && (m.level === 'diamond' || m.level === 'platinum' || m.level === 'gold'));
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === targetDate && (m.level === 'diamond' || m.level === 'platinum' || m.level === 'gold'));
       if (!hasHigherMedal) {
         message = 'וואו! צברת היום 60 דקות אימון! את עושה עבודה מצוינת! מגיעה לך מדליית זהב!';
         medal = '🥇';
       }
     } else if (totalMinutes >= 40) {
       level = 'silver';
-      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today && (m.level === 'diamond' || m.level === 'platinum' || m.level === 'gold' || m.level === 'silver'));
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === targetDate && (m.level === 'diamond' || m.level === 'platinum' || m.level === 'gold' || m.level === 'silver'));
       if (!hasHigherMedal) {
         message = 'נפלא! צברת היום 40 דקות אימון. מגיעה לך מדליית כסף!';
         medal = '🥈';
       }
     } else if (totalMinutes >= 15) {
       level = 'bronze';
-      const hasAnyDurationMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today);
+      const hasAnyDurationMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === targetDate);
       if (!hasAnyDurationMedal) {
         message = 'מצוין! צברת 15 דקות אימון היום! את כמובן מוזמנת להתאמן עוד....אבל בינתיים קבלי מדליית נחושת!';
         medal = '🥉';
@@ -232,21 +232,21 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
     }
 
     if (message && level) {
-      // Remove lower medals from today
-      const medalsToRemove = existingMedals.filter(m => m.medalType === 'duration' && m.earnedDate === today);
+      // Remove lower medals from the target date
+      const medalsToRemove = existingMedals.filter(m => m.medalType === 'duration' && m.earnedDate === targetDate);
       medalsToRemove.forEach(m => {
         const allMedals = getStudentMedalRecords(studentId);
         const filtered = allMedals.filter(medal => medal.id !== m.id);
         localStorage.setItem('musicSystem_medalRecords', JSON.stringify(filtered));
       });
       
-      // Add new medal
+      // Add new medal with correct date
       addMedalRecord({
         studentId,
         medalType: 'duration',
         level,
         minutes: totalMinutes,
-        earnedDate: today,
+        earnedDate: targetDate,
       });
       
       showCelebration(message, medal);
@@ -386,7 +386,8 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
     setManualEndTime('');
     setManualDate('');
     
-    showDurationCongrats(durationMinutes);
+    // Award medal for the ENTERED DATE, not today
+    showDurationCongrats(durationMinutes, manualDate);
 
     toast({
       title: 'אימון נרשם!',
