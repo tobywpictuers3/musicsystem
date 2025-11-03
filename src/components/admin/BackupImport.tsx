@@ -357,21 +357,21 @@ const BackupImport = () => {
 
             <div className="p-4 bg-muted/50 rounded-lg space-y-2 mt-4">
               <p className="text-sm font-medium">
-                🔒 מדיניות פרטיות - כל הגיבויים ידניים בלבד
+                🔄 שמירות אוטומטיות - רק ל-Worker שלך
               </p>
               <p className="text-sm text-muted-foreground mb-2">
-                <strong>שמירה ל-Dropbox:</strong>
+                <strong>שמירה אוטומטית ל-Worker שלך:</strong>
               </p>
               <ul className="text-sm text-muted-foreground space-y-1 mr-4 mb-3">
-                <li>• לחיצה ידנית על "שלח גיבוי" בלבד</li>
-                <li>• לחיצה על "שמור שינויים" בראש הדף</li>
-                <li>• אין שמירות אוטומטיות</li>
+                <li>• כל 30 דקות אוטומטית</li>
+                <li>• אחרי כל שינוי בנתונים</li>
+                <li>• בכל פעם שמתקבלת בקשת החלפה</li>
               </ul>
               <p className="text-sm text-muted-foreground mb-2">
-                <strong>הורדה מקומית למחשב:</strong>
+                <strong>הורדה מקומית למחשב - ידני בלבד:</strong>
               </p>
               <ul className="text-sm text-muted-foreground space-y-1 mr-4">
-                <li>• לחיצה על "הורד גיבוי מקומי" בלבד</li>
+                <li>• לחיצה על "הורד גיבוי מקומי"</li>
                 <li>• לחיצה על "שמור שינויים" (בראש הדף)</li>
                 <li>• אין הורדות אוטומטיות</li>
               </ul>

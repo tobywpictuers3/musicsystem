@@ -21,9 +21,10 @@ class SyncManagerImpl implements SyncManager {
   private backupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    // REMOVED: All automatic backups for privacy
-    // No beforeunload listener
-    // No periodic backup
+    logger.info('🔄 SyncManager initialized');
+    
+    // Start periodic backup to Worker every 30 minutes (secure - your Worker only)
+    this.startPeriodicBackup();
   }
 
   // Load data from Cloudflare Worker using workerApi
@@ -124,26 +125,28 @@ class SyncManagerImpl implements SyncManager {
   }
 
   /**
-   * REMOVED: Periodic automatic backup
-   * Only manual saves are allowed for privacy
+   * Periodic backup to YOUR external Worker only (every 30 minutes)
+   * This is SAFE - goes to your Worker, not Lovable
    */
   startPeriodicBackup(): void {
-    // No automatic backups
+    if (this.backupInterval) {
+      clearInterval(this.backupInterval);
+    }
+
+    this.backupInterval = setInterval(() => {
+      this.autoSaveToWorker();
+    }, 30 * 60 * 1000); // 30 minutes
   }
 
-  /**
-   * REMOVED: Stop periodic backup (not needed)
-   */
   stopPeriodicBackup(): void {
-    // No automatic backups
+    if (this.backupInterval) {
+      clearInterval(this.backupInterval);
+      this.backupInterval = null;
+    }
   }
 
-  /**
-   * REMOVED: Auto-save on swap request
-   * Only manual saves are allowed
-   */
   onSwapRequestReceived(): void {
-    // No automatic saves
+    this.autoSaveToWorker();
   }
 
   // Manual download for use in BackupImport component
@@ -177,20 +180,41 @@ class SyncManagerImpl implements SyncManager {
   }
 
   /**
-   * REMOVED: Auto-save on user action
-   * Only manual saves are allowed for privacy
+   * Auto-save to YOUR Worker on data changes (secure - your Worker only)
    */
   async onUserAction(action: string): Promise<void> {
     logger.info(`User action: ${action}`);
-    // No automatic saves
+    await this.autoSaveToWorker();
   }
 
   /**
-   * REMOVED: Auto-save functionality
-   * Saves are now manual only via UI buttons
+   * Auto-save to YOUR external Worker (secure - not Lovable)
    */
   private async autoSaveToWorker(): Promise<void> {
-    // No automatic saves
+    try {
+      const students = JSON.parse(localStorage.getItem('musicSystem_students') || '[]');
+      const lessons = JSON.parse(localStorage.getItem('musicSystem_lessons') || '[]');
+      const payments = JSON.parse(localStorage.getItem('musicSystem_payments') || '[]');
+      const swapRequests = JSON.parse(localStorage.getItem('musicSystem_swapRequests') || '[]');
+      const files = JSON.parse(localStorage.getItem('musicSystem_files') || '[]');
+      const scheduleTemplates = JSON.parse(localStorage.getItem('musicSystem_scheduleTemplates') || '[]');
+      const integrationSettings = JSON.parse(localStorage.getItem('musicSystem_integrationSettings') || '{}');
+
+      const allData = {
+        students,
+        lessons,
+        payments,
+        swapRequests,
+        files,
+        scheduleTemplates,
+        integrationSettings,
+        timestamp: new Date().toISOString()
+      };
+
+      await this.saveToWorker(allData);
+    } catch (error) {
+      logger.error('Failed to auto-save to Worker:', error);
+    }
   }
 
   async importBackup(file: File): Promise<boolean> {
