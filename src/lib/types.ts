@@ -147,6 +147,17 @@ export interface PracticeSession {
   createdAt: string;
 }
 
+export interface MedalRecord {
+  id: string;
+  studentId: string;
+  medalType: 'duration' | 'streak';
+  level: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'streak3' | 'streak5' | 'streak7';
+  minutes?: number; // for duration medals
+  streakDays?: number; // for streak medals
+  earnedDate: string; // YYYY-MM-DD
+  createdAt: string;
+}
+
 export interface MonthlyAchievement {
   id: string;
   studentId: string;

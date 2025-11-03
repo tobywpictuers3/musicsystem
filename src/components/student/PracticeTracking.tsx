@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Play, Square, Clock, Trophy, Sparkles, TrendingUp } from 'lucide-react';
-import { getPracticeSessions, addPracticeSession, getStudentPracticeSessions, updateMonthlyAchievement, getStudents, getLessons } from '@/lib/storage';
+import { getPracticeSessions, addPracticeSession, getStudentPracticeSessions, updateMonthlyAchievement, getStudents, getLessons, addMedalRecord, getStudentMedalRecords } from '@/lib/storage';
 import { PracticeSession } from '@/lib/types';
 import { toast } from '@/hooks/use-toast';
 import confetti from 'canvas-confetti';
@@ -62,11 +62,23 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
       .map(([date, daySessions]) => {
         const totalMinutes = daySessions.reduce((sum, s) => sum + s.durationMinutes, 0);
         const medals: string[] = [];
+        const allMedals = getStudentMedalRecords(studentId);
+        const dayMedals = allMedals.filter(m => m.earnedDate === date);
         
-        // Daily duration medals
-        if (totalMinutes >= 60) medals.push('🥇 60 דקות');
-        else if (totalMinutes >= 30) medals.push('🥈 30 דקות');
-        else if (totalMinutes >= 15) medals.push('🥉 15 דקות');
+        // Get current day medals
+        dayMedals.forEach(m => {
+          if (m.medalType === 'duration') {
+            if (m.level === 'diamond') medals.push('💠 יהלום');
+            else if (m.level === 'platinum') medals.push('💎 פלטינום');
+            else if (m.level === 'gold') medals.push('🥇 זהב');
+            else if (m.level === 'silver') medals.push('🥈 כסף');
+            else if (m.level === 'bronze') medals.push('🥉 נחושת');
+          } else if (m.medalType === 'streak') {
+            if (m.level === 'streak7') medals.push('👑 מרצפת');
+            else if (m.level === 'streak5') medals.push('⚡ מרוצף');
+            else if (m.level === 'streak3') medals.push('🔥 רצוף');
+          }
+        });
 
         return { date, sessions: daySessions, totalMinutes, medals };
       })
@@ -105,65 +117,138 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
     updateMonthlyAchievement(studentId, { maxStreak: streak });
   };
 
-  const showStreakCongrats = (streak: number) => {
-    const key = `streak-${streak}`;
-    if (shownCongrats.has(key)) return;
+  const getNextMedalInfo = (totalMinutes: number): { nextMedal: string; remaining: number } | null => {
+    if (totalMinutes < 15) return { nextMedal: 'נחושת (15 דקות)', remaining: 15 - totalMinutes };
+    if (totalMinutes < 40) return { nextMedal: 'כסף (40 דקות)', remaining: 40 - totalMinutes };
+    if (totalMinutes < 60) return { nextMedal: 'זהב (60 דקות)', remaining: 60 - totalMinutes };
+    if (totalMinutes < 100) return { nextMedal: 'פלטינום (100 דקות)', remaining: 100 - totalMinutes };
+    if (totalMinutes < 150) return { nextMedal: 'יהלום (150 דקות)', remaining: 150 - totalMinutes };
+    return null;
+  };
 
+  const getNextStreakInfo = (streak: number): { nextMedal: string; remaining: number } | null => {
+    if (streak < 3) return { nextMedal: 'רצוף (3 ימים)', remaining: 3 - streak };
+    if (streak < 5) return { nextMedal: 'מרוצף (5 ימים)', remaining: 5 - streak };
+    if (streak < 7) return { nextMedal: 'מרצפת (7 ימים)', remaining: 7 - streak };
+    return null;
+  };
+
+  const showStreakCongrats = (streak: number) => {
+    const existingMedals = getStudentMedalRecords(studentId);
+    const today = new Date().toISOString().split('T')[0];
+    
     let message = '';
     let medal = '';
+    let level: 'streak3' | 'streak5' | 'streak7' | null = null;
     
-    if (streak === 7) {
-      message = 'וואוווו מהמם! שבוע של אימונים יומיומיים! ככה תוכלי בעזרת השם להגיע רחוק! מגיעה לך מדליית זהב!';
-      medal = '🥇';
-    } else if (streak === 6) {
-      message = 'שמתי לב שהתאמנת 6 ימים ברציפות! מעולה! עוד יום אחד ואת סוגרת שבוע אימון רצוף. המשיכי כך! מגיעה לך מדליית כסף!';
-      medal = '🥈';
-    } else if (streak === 5) {
-      message = 'שמתי לב שהתאמנת ברצף 5 ימים. המשיכי כך!';
-      medal = '⭐';
-    } else if (streak === 4) {
-      message = 'שמתי לב שהתאמנת ברצף 4 ימים. המשיכי כך!';
-      medal = '⭐';
-    } else if (streak === 3) {
-      message = 'שמתי לב שהתאמנת ברצף 3 ימים. המשיכי כך! מגיעה לך מדליית נחושת!';
-      medal = '🥉';
+    if (streak >= 7) {
+      level = 'streak7';
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'streak' && m.earnedDate === today && (m.level === 'streak7'));
+      if (!hasHigherMedal) {
+        message = 'וואוווו מהמם! שבוע של אימונים יומיומיים! ככה תוכלי בעזרת השם להגיע רחוק! מגיעה לך מדליית מרצפת!';
+        medal = '👑';
+      }
+    } else if (streak >= 5) {
+      level = 'streak5';
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'streak' && m.earnedDate === today && (m.level === 'streak7' || m.level === 'streak5'));
+      if (!hasHigherMedal) {
+        message = 'שמתי לב שהתאמנת ברצף 5 ימים. המשיכי כך! מגיעה לך מדליית מרוצף!';
+        medal = '⚡';
+      }
+    } else if (streak >= 3) {
+      level = 'streak3';
+      const hasAnyStreakMedal = existingMedals.find(m => m.medalType === 'streak' && m.earnedDate === today);
+      if (!hasAnyStreakMedal) {
+        message = 'שמתי לב שהתאמנת ברצף 3 ימים. המשיכי כך! מגיעה לך מדליית רצוף!';
+        medal = '🔥';
+      }
     }
 
-    if (message) {
-      setShownCongrats(prev => new Set(prev).add(key));
+    if (message && level) {
+      // Remove lower medals from today
+      const medalsToRemove = existingMedals.filter(m => m.medalType === 'streak' && m.earnedDate === today);
+      medalsToRemove.forEach(m => {
+        const allMedals = getStudentMedalRecords(studentId);
+        const filtered = allMedals.filter(medal => medal.id !== m.id);
+        localStorage.setItem('musicSystem_medalRecords', JSON.stringify(filtered));
+      });
+      
+      // Add new medal
+      addMedalRecord({
+        studentId,
+        medalType: 'streak',
+        level,
+        streakDays: streak,
+        earnedDate: today,
+      });
+      
       showCelebration(message, medal);
     }
   };
 
   const showDurationCongrats = (totalMinutes: number) => {
     const today = new Date().toISOString().split('T')[0];
+    const existingMedals = getStudentMedalRecords(studentId);
+    
     let message = '';
     let medal = '';
+    let level: 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | null = null;
     
-    if (totalMinutes >= 60) {
-      const key = `duration-${today}-60`;
-      if (!shownCongrats.has(key)) {
+    if (totalMinutes >= 150) {
+      level = 'diamond';
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today && m.level === 'diamond');
+      if (!hasHigherMedal) {
+        message = 'בלתי יאומן! 150 דקות אימון! את אלופה אמיתית! מגיעה לך מדליית יהלום!';
+        medal = '💠';
+      }
+    } else if (totalMinutes >= 100) {
+      level = 'platinum';
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today && (m.level === 'diamond' || m.level === 'platinum'));
+      if (!hasHigherMedal) {
+        message = 'יוצא מן הכלל! 100 דקות אימון! מגיעה לך מדליית פלטינום!';
+        medal = '💎';
+      }
+    } else if (totalMinutes >= 60) {
+      level = 'gold';
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today && (m.level === 'diamond' || m.level === 'platinum' || m.level === 'gold'));
+      if (!hasHigherMedal) {
         message = 'וואו! צברת היום 60 דקות אימון! את עושה עבודה מצוינת! מגיעה לך מדליית זהב!';
         medal = '🥇';
-        setShownCongrats(prev => new Set(prev).add(key));
       }
-    } else if (totalMinutes >= 30) {
-      const key = `duration-${today}-30`;
-      if (!shownCongrats.has(key)) {
-        message = 'נפלא! צברת היום 30 דקות אימון. מגיעה לך מדליית כסף!';
+    } else if (totalMinutes >= 40) {
+      level = 'silver';
+      const hasHigherMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today && (m.level === 'diamond' || m.level === 'platinum' || m.level === 'gold' || m.level === 'silver'));
+      if (!hasHigherMedal) {
+        message = 'נפלא! צברת היום 40 דקות אימון. מגיעה לך מדליית כסף!';
         medal = '🥈';
-        setShownCongrats(prev => new Set(prev).add(key));
       }
     } else if (totalMinutes >= 15) {
-      const key = `duration-${today}-15`;
-      if (!shownCongrats.has(key)) {
+      level = 'bronze';
+      const hasAnyDurationMedal = existingMedals.find(m => m.medalType === 'duration' && m.earnedDate === today);
+      if (!hasAnyDurationMedal) {
         message = 'מצוין! צברת 15 דקות אימון היום! את כמובן מוזמנת להתאמן עוד....אבל בינתיים קבלי מדליית נחושת!';
         medal = '🥉';
-        setShownCongrats(prev => new Set(prev).add(key));
       }
     }
 
-    if (message) {
+    if (message && level) {
+      // Remove lower medals from today
+      const medalsToRemove = existingMedals.filter(m => m.medalType === 'duration' && m.earnedDate === today);
+      medalsToRemove.forEach(m => {
+        const allMedals = getStudentMedalRecords(studentId);
+        const filtered = allMedals.filter(medal => medal.id !== m.id);
+        localStorage.setItem('musicSystem_medalRecords', JSON.stringify(filtered));
+      });
+      
+      // Add new medal
+      addMedalRecord({
+        studentId,
+        medalType: 'duration',
+        level,
+        minutes: totalMinutes,
+        earnedDate: today,
+      });
+      
       showCelebration(message, medal);
     }
     
@@ -438,7 +523,7 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
       </Card>
 
       {/* Weekly Summary & Daily Average */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -463,6 +548,33 @@ const PracticeTracking = ({ studentId }: PracticeTrackingProps) => {
               <Badge variant="secondary" className="text-lg px-4 py-2">
                 {calculateDailyAverage().toFixed(1)} דקות
               </Badge>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-2">
+              {(() => {
+                const today = new Date().toISOString().split('T')[0];
+                const todayStats = dailyStats.find(d => d.date === today);
+                const todayMinutes = todayStats?.totalMinutes || 0;
+                const nextMedalInfo = getNextMedalInfo(todayMinutes);
+                
+                return nextMedalInfo ? (
+                  <div className="text-center">
+                    <div className="text-sm text-muted-foreground">נותרו למדליה הבאה</div>
+                    <div className="text-lg font-bold text-primary">
+                      {nextMedalInfo.remaining} דקות
+                    </div>
+                    <div className="text-xs text-muted-foreground">{nextMedalInfo.nextMedal}</div>
+                  </div>
+                ) : (
+                  <div className="text-center text-sm text-green-600 font-semibold">
+                    🏆 השגת את כל המדליות היומיות!
+                  </div>
+                );
+              })()}
             </div>
           </CardContent>
         </Card>

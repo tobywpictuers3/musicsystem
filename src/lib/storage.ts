@@ -1,4 +1,4 @@
-import { Student, Lesson, Payment, SwapRequest, FileEntry, ScheduleTemplate, IntegrationSettings, Performance, OneTimePayment, Holiday, PracticeSession, MonthlyAchievement, LeaderboardEntry } from './types';
+import { Student, Lesson, Payment, SwapRequest, FileEntry, ScheduleTemplate, IntegrationSettings, Performance, OneTimePayment, Holiday, PracticeSession, MonthlyAchievement, LeaderboardEntry, MedalRecord } from './types';
 import { syncManager } from './syncManager';
 
 // Utility function to simulate server-side ID generation
@@ -686,4 +686,53 @@ export const getCurrentMonthLeaderboard = (): LeaderboardEntry[] => {
     })
     .filter((entry): entry is LeaderboardEntry => entry !== null)
     .sort((a, b) => b.dailyAverage - a.dailyAverage);
+};
+
+// Medal Records
+export const getMedalRecords = (): MedalRecord[] => {
+  try {
+    const data = localStorage.getItem('musicSystem_medalRecords');
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error loading medal records:', error);
+    return [];
+  }
+};
+
+export const getStudentMedalRecords = (studentId: string): MedalRecord[] => {
+  const records = getMedalRecords();
+  return records
+    .filter(r => r.studentId === studentId)
+    .sort((a, b) => new Date(b.earnedDate).getTime() - new Date(a.earnedDate).getTime());
+};
+
+export const addMedalRecord = (record: Omit<MedalRecord, 'id' | 'createdAt'>): MedalRecord => {
+  const records = getMedalRecords();
+  const newRecord: MedalRecord = {
+    ...record,
+    id: generateId(),
+    createdAt: new Date().toISOString(),
+  };
+  records.push(newRecord);
+  localStorage.setItem('musicSystem_medalRecords', JSON.stringify(records));
+  syncManager.onUserAction('update');
+  return newRecord;
+};
+
+export const getStudentBestAchievements = (studentId: string): {
+  bestDailyAverage: number;
+  bestDailyMinutes: number;
+  bestStreak: number;
+} => {
+  const achievements = getStudentMonthlyAchievements(studentId);
+  
+  if (achievements.length === 0) {
+    return { bestDailyAverage: 0, bestDailyMinutes: 0, bestStreak: 0 };
+  }
+  
+  return {
+    bestDailyAverage: Math.max(...achievements.map(a => a.maxDailyAverage)),
+    bestDailyMinutes: Math.max(...achievements.map(a => a.maxDailyMinutes)),
+    bestStreak: Math.max(...achievements.map(a => a.maxStreak)),
+  };
 };
