@@ -12,17 +12,20 @@ export const SaveButton = () => {
     setIsSaving(true);
 
     try {
-      // Manual sync to Worker
-      const success = await hybridSync.manualSync();
+      const result = await hybridSync.onDataChange();
 
-      if (!success) {
-        throw new Error('שגיאה בסנכרון ל-Worker');
+      if (result.success) {
+        toast({
+          title: '✅ השמירה הושלמה בהצלחה',
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: '❌ שגיאה בשמירה',
+          description: result.message,
+          variant: 'destructive',
+        });
       }
-
-      toast({
-        title: '✅ השמירה הושלמה בהצלחה',
-        description: 'הנתונים סונכרנו ל-Worker',
-      });
 
     } catch (error) {
       logger.error('Save error:', error);

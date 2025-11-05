@@ -14,21 +14,18 @@ const BackupImport = () => {
   const handleManualSync = async () => {
     setIsLoading(true);
     try {
-      const success = await hybridSync.manualSync();
+      const result = await hybridSync.onDataChange();
       
-      if (success) {
-        toast({
-          title: '✅ סנכרון הושלם',
-          description: 'הנתונים סונכרנו ל-Worker בהצלחה',
-        });
-      } else {
-        throw new Error('Sync failed');
-      }
+      toast({
+        title: result.success ? '✅ סנכרון הושלם' : '❌ שגיאה בסנכרון',
+        description: result.message,
+        variant: result.success ? 'default' : 'destructive',
+      });
     } catch (error) {
       logger.error('Manual sync error:', error);
       toast({
         title: '❌ שגיאה בסנכרון',
-        description: 'אירעה תקלה. נסי שוב.',
+        description: 'שמירה נכשלה, בדקי חיבור לאינטרנט',
         variant: 'destructive',
       });
     } finally {
@@ -68,25 +65,24 @@ const BackupImport = () => {
 
     setIsLoading(true);
     try {
-      const success = await hybridSync.importBackup(file);
+      const result = await hybridSync.importBackup(file);
       
-      if (success) {
-        toast({
-          title: '✅ הגיבוי יובא',
-          description: 'הנתונים טעונו וסונכרנו. הדף יתרענן...',
-        });
+      toast({
+        title: result.success ? '✅ הגיבוי יובא' : '❌ שגיאה ביבוא',
+        description: result.message,
+        variant: result.success ? 'default' : 'destructive',
+      });
 
+      if (result.success) {
         setTimeout(() => {
           window.location.reload();
         }, 1500);
-      } else {
-        throw new Error('Import failed');
       }
     } catch (error) {
       logger.error('Import error:', error);
       toast({
         title: '❌ שגיאה ביבוא',
-        description: 'אירעה תקלה. נסי שוב.',
+        description: 'שגיאה בטעינת הגיבוי',
         variant: 'destructive'
       });
     } finally {
@@ -123,7 +119,7 @@ const BackupImport = () => {
               <strong>📱 localStorage:</strong> משמש רק כמטמון זמני לעבודה מהירה
             </p>
             <p className="text-sm text-muted-foreground">
-              <strong>🔄 סנכרון אוטומטי:</strong> כל 30 דקות + אחרי כל שינוי
+              <strong>🔄 סנכרון אוטומטי:</strong> מיידי אחרי כל שינוי
             </p>
             {syncState.lastSyncTime && (
               <p className="text-sm text-muted-foreground">

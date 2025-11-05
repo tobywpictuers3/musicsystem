@@ -26,6 +26,7 @@ export const workerApi = {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
+          'Cache-Control': 'no-store',
         },
         mode: 'cors',
         cache: 'no-store',
@@ -62,6 +63,7 @@ export const workerApi = {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Cache-Control': 'no-store',
         },
         body: JSON.stringify(data),
         mode: 'cors',

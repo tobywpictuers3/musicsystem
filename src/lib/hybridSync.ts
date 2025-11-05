@@ -65,101 +65,46 @@ class HybridSyncManager {
   }
 
   /**
-   * Start periodic sync every 30 minutes
+   * Periodic sync is disabled - we sync on every change
    */
   private startPeriodicSync() {
-    this.syncInterval = setInterval(() => {
-      if (this.syncState.isOnline && !this.syncState.isSyncing) {
-        this.syncToWorker();
-      }
-    }, 30 * 60 * 1000); // 30 minutes
+    // No periodic sync needed - we sync immediately on every change
   }
 
   /**
    * Load data on app initialization
-   * Only loads from Worker on first tab open, not on refresh
+   * Always loads from Worker on every page load/refresh
    */
   async loadDataOnInit(): Promise<void> {
     try {
-      const SESSION_KEY = 'hybridSync_session';
-      const isFirstLoad = !sessionStorage.getItem(SESSION_KEY);
+      logger.info('🔄 Loading from Worker...');
 
-      if (isFirstLoad) {
-        logger.info('🔄 First load - checking Worker...');
-        sessionStorage.setItem(SESSION_KEY, 'active');
+      if (!this.syncState.isOnline) {
+        logger.warn('📡 Offline - cannot load from Worker');
+        return;
+      }
 
-        if (!this.syncState.isOnline) {
-          logger.warn('📦 Offline - loading from cache');
-          this.loadFromCache();
-          return;
-        }
+      const result = await workerApi.downloadLatest();
 
-        // Load from Worker on first tab open
-        const result = await workerApi.downloadLatest();
-
-        if (result.success && result.data) {
-          logger.info('✅ Data loaded from Worker');
-          this.updateLocalStorage(result.data);
-          this.syncState.lastSyncTime = new Date().toISOString();
-        } else if (result.error === 'NO_VERSION_FOUND') {
-          logger.info('ℹ️ No version found on Worker');
-          this.loadFromCache();
-        } else {
-          logger.warn('⚠️ Worker load failed - using cache');
-          this.loadFromCache();
-        }
+      if (result.success && result.data) {
+        logger.info('✅ Data loaded from Worker');
+        this.updateInMemoryStorage(result.data);
+        this.syncState.lastSyncTime = new Date().toISOString();
+      } else if (result.error === 'NO_VERSION_FOUND') {
+        logger.info('ℹ️ No version found on Worker - starting fresh');
       } else {
-        logger.info('🔄 Refresh detected - loading from cache');
-        this.loadFromCache();
+        logger.warn('⚠️ Worker load failed');
       }
     } catch (error) {
       logger.error('❌ Load error:', error);
-      this.loadFromCache();
     }
   }
 
-  /**
-   * Load data from localStorage cache
-   */
-  private loadFromCache() {
-    try {
-      const cacheKeys = [
-        'musicSystem_students',
-        'musicSystem_lessons',
-        'musicSystem_payments',
-        'musicSystem_swapRequests',
-        'musicSystem_files',
-        'musicSystem_scheduleTemplates',
-        'musicSystem_integrationSettings',
-        'musicSystem_performances',
-        'musicSystem_holidays',
-        'musicSystem_practiceSessions',
-        'musicSystem_monthlyAchievements',
-        'musicSystem_medalRecords',
-        'oneTimePayments',
-      ];
-
-      let hasCache = false;
-      cacheKeys.forEach(key => {
-        if (localStorage.getItem(key)) {
-          hasCache = true;
-        }
-      });
-
-      if (hasCache) {
-        logger.info('📦 Data loaded from cache');
-      } else {
-        logger.info('ℹ️ No cache found - starting fresh');
-      }
-    } catch (error) {
-      logger.error('❌ Cache load error:', error);
-    }
-  }
 
   /**
    * Update in-memory storage with Worker data
    */
-  private updateLocalStorage(data: any) {
+  private updateInMemoryStorage(data: any) {
     try {
       // Import the storage functions dynamically to avoid circular dependency
       import('./storage').then(({ initializeStorage }) => {
@@ -172,15 +117,31 @@ class HybridSyncManager {
   }
 
   /**
-   * On data change - queue for sync
+   * On data change - immediately sync to Worker
    */
-  async onDataChange() {
+  async onDataChange(): Promise<{ success: boolean; message: string }> {
     this.syncState.pendingChanges++;
 
-    if (this.syncState.isOnline) {
-      await this.syncToWorker();
+    if (!this.syncState.isOnline) {
+      logger.warn('📡 Offline - cannot sync');
+      return { 
+        success: false, 
+        message: 'שמירה נכשלה, בדקי חיבור לאינטרנט' 
+      };
+    }
+
+    const success = await this.syncToWorker();
+    
+    if (success) {
+      return { 
+        success: true, 
+        message: 'נשמר בדרופבוקס בהצלחה' 
+      };
     } else {
-      logger.info('📡 Offline - change queued for sync');
+      return { 
+        success: false, 
+        message: 'שמירה נכשלה, בדקי חיבור לאינטרנט' 
+      };
     }
   }
 
@@ -288,21 +249,37 @@ class HybridSyncManager {
   }
 
   /**
-   * Import backup from file
+   * Import backup from file and sync to Worker
    */
-  async importBackup(file: File): Promise<boolean> {
+  async importBackup(file: File): Promise<{ success: boolean; message: string }> {
     try {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      this.updateLocalStorage(data);
-      await this.syncToWorker();
+      this.updateInMemoryStorage(data);
+      
+      // Immediately sync to Worker
+      const success = await this.syncToWorker();
 
-      logger.info('✅ Backup imported and synced');
-      return true;
+      if (success) {
+        logger.info('✅ Backup imported and synced to Worker');
+        return { 
+          success: true, 
+          message: 'הגיבוי נטען והועלה לדרופבוקס בהצלחה' 
+        };
+      } else {
+        logger.warn('⚠️ Backup imported but sync failed');
+        return { 
+          success: false, 
+          message: 'הגיבוי נטען אך ההעלאה לדרופבוקס נכשלה' 
+        };
+      }
     } catch (error) {
       logger.error('❌ Import error:', error);
-      return false;
+      return { 
+        success: false, 
+        message: 'שגיאה בטעינת הגיבוי' 
+      };
     }
   }
 
