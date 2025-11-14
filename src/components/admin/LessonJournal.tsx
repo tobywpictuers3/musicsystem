@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +38,7 @@ const LessonJournal = () => {
   const [undoStack, setUndoStack] = useState<Array<{ action: string; data: any }>>([]);
   const [editedTime, setEditedTime] = useState<string>('');
   const [bankTimeChange, setBankTimeChange] = useState<number>(0);
+  const [markAsNoShow, setMarkAsNoShow] = useState(false);
 
   // Form states for adding lesson
   const [newLessonStudent, setNewLessonStudent] = useState('');
@@ -378,6 +380,7 @@ const LessonJournal = () => {
     if (lesson.status !== 'completed') return;
     setEditingLesson(lesson as Lesson);
     setBankTimeChange(0);
+    setMarkAsNoShow(false);
     setShowBankTimeDialog(true);
   };
 
@@ -406,16 +409,26 @@ const LessonJournal = () => {
     if (!editingLesson) return;
     
     const lesson = lessons.find(l => l.id === editingLesson.id);
-    const student = students.find(s => s.id === editingLesson.studentId);
-    const studentName = student ? `${student.firstName} ${student.lastName}` : 'לא ידוע';
     
+    // אם סימנו "תלמידה נעדרה"
+    if (markAsNoShow) {
+      setUndoStack([...undoStack, { action: 'update', data: lesson }]);
+      updateLesson(editingLesson.id, {
+        status: 'no_show',
+        notes: (editingLesson.notes || '') + '\nתלמידה נעדרה'
+      });
+      
+      toast({ description: 'השיעור סומן כ"תלמידה נעדרה"' });
+    }
     // אם מפחיתים בדיוק 30 דקות - מוחקים את השיעור לגמרי
-    if (bankTimeChange === -30) {
+    else if (bankTimeChange === -30) {
       setUndoStack([...undoStack, { action: 'delete', data: lesson }]);
       deleteLesson(editingLesson.id);
       
       toast({ description: 'השיעור נמחק לצמיתות (כולל המיספור)' });
-    } else {
+    } 
+    // עדכון בנק זמן רגיל
+    else {
       setUndoStack([...undoStack, { action: 'update', data: lesson }]);
       const currentNotes = editingLesson.notes || '';
       const newNote = `בנק זמן: ${bankTimeChange > 0 ? '+' : ''}${bankTimeChange} דקות`;
@@ -428,6 +441,7 @@ const LessonJournal = () => {
     }
     
     setShowBankTimeDialog(false);
+    setMarkAsNoShow(false);
     loadData();
   };
 
@@ -697,6 +711,8 @@ const LessonJournal = () => {
                               className={`p-2 rounded text-xs ${
                                 lesson.status === 'completed'
                                   ? 'bg-[#8B2942]/10 border border-[#8B2942]/30 cursor-pointer'
+                                  : lesson.status === 'no_show'
+                                  ? 'bg-orange-100 border border-orange-500 cursor-pointer'
                                   : lesson.isFromTemplate
                                   ? 'bg-blue-50 border border-blue-200 cursor-move text-black'
                                   : 'bg-secondary/30 border border-border cursor-pointer text-black'
@@ -887,6 +903,18 @@ const LessonJournal = () => {
           </DialogHeader>
           
           <div className="space-y-4">
+            {/* Checkbox לסימון נעדרות */}
+            <div className="flex items-center space-x-2 space-x-reverse">
+              <Checkbox
+                id="noShow"
+                checked={markAsNoShow}
+                onCheckedChange={(checked) => setMarkAsNoShow(checked === true)}
+              />
+              <Label htmlFor="noShow" className="cursor-pointer">
+                התלמידה לא הגיעה לשיעור
+              </Label>
+            </div>
+            
             <div>
               <Label>שינוי בדקות (+ או -)</Label>
               <Input
@@ -894,6 +922,7 @@ const LessonJournal = () => {
                 value={bankTimeChange}
                 onChange={(e) => setBankTimeChange(parseInt(e.target.value) || 0)}
                 placeholder="לדוגמה: 15 או -10"
+                disabled={markAsNoShow}
               />
             </div>
 
