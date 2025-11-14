@@ -52,6 +52,12 @@ class HybridSyncManager {
    */
   private setupUnloadListener() {
     window.addEventListener('beforeunload', () => {
+      // 🔧 DEV MODE: Skip all Worker sync
+      if (isDevMode()) {
+        logger.info('🔧 DEV MODE: Skipping beforeunload sync');
+        return;
+      }
+      
       if (this.syncState.isOnline && this.syncState.pendingChanges > 0) {
         logger.info('💾 Saving to Worker on close...');
         
