@@ -179,3 +179,17 @@ export interface LeaderboardEntry {
   maxDailyMinutes: number;
   maxStreak: number;
 }
+
+export interface Message {
+  id: string;
+  senderId: string; // 'admin' or student ID
+  senderName: string;
+  recipientIds: string[]; // 'all', 'admin', or specific student IDs
+  subject: string;
+  content: string;
+  createdAt: string;
+  expiresAt?: string; // optional expiration date
+  isRead?: { [studentId: string]: boolean }; // track read status per recipient
+  inReplyTo?: string; // ID of message being replied to
+  type: 'general' | 'swap_request' | 'swap_approval' | 'swap_rejection';
+}

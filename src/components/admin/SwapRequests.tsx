@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { MessageSquare, Check, X, Clock, Save } from 'lucide-react';
-import { getSwapRequests, updateSwapRequest, getStudents } from '@/lib/storage';
+import { getSwapRequests, updateSwapRequest, getStudents, getLessons } from '@/lib/storage';
 import { toast } from '@/hooks/use-toast';
 import { syncManager } from '@/lib/syncManager';
+import { addMessage } from '@/lib/messages';
+import { SwapRequest } from '@/lib/types';
 
 const SwapRequests = () => {
   const [requests, setRequests] = useState(getSwapRequests());
@@ -18,7 +20,40 @@ const SwapRequests = () => {
   };
 
   const handleApprove = (requestId: string) => {
+    const request = requests.find(r => r.id === requestId);
+    if (!request) return;
+    
     updateSwapRequest(requestId, { status: 'approved' });
+    
+    const requester = students.find(s => s.id === request.requesterId);
+    const target = students.find(s => s.id === request.targetId);
+    
+    // Find the swapped lesson to set expiration date
+    const lessons = getLessons();
+    const swappedLesson = lessons.find(
+      l => l.studentId === request.requesterId && 
+           l.date === request.date && 
+           l.startTime === request.time
+    );
+    
+    // Send approval message to both students
+    if (requester && target && swappedLesson) {
+      const expirationDate = new Date(swappedLesson.date);
+      expirationDate.setHours(23, 59, 59);
+      
+      const approvalMessage = `בקשת החלפה אושרה!\n\nהשיעור של ${requester.firstName} ${requester.lastName} בתאריך ${request.date} בשעה ${request.time}\nהוחלף עם השיעור של ${target.firstName} ${target.lastName}${request.targetDate ? ` בתאריך ${request.targetDate} בשעה ${request.targetTime}` : ''}\n\nסיבה: ${request.reason}`;
+      
+      addMessage({
+        senderId: 'admin',
+        senderName: 'המנהל',
+        recipientIds: [request.requesterId, request.targetId],
+        subject: 'אישור החלפת שיעור',
+        content: approvalMessage,
+        expiresAt: expirationDate.toISOString(),
+        type: 'swap_approval',
+      });
+    }
+    
     setRequests(getSwapRequests());
     syncManager.onUserAction('update');
     // Trigger automatic backup when swap request is processed
@@ -30,7 +65,28 @@ const SwapRequests = () => {
   };
 
   const handleReject = (requestId: string) => {
+    const request = requests.find(r => r.id === requestId);
+    if (!request) return;
+    
     updateSwapRequest(requestId, { status: 'rejected' });
+    
+    const requester = students.find(s => s.id === request.requesterId);
+    const target = students.find(s => s.id === request.targetId);
+    
+    // Send rejection message to requester
+    if (requester && target) {
+      const rejectionMessage = `בקשת ההחלפה נדחתה.\n\nהשיעור בתאריך ${request.date} בשעה ${request.time}\nעם ${target.firstName} ${target.lastName}\n\nסיבה: ${request.reason}`;
+      
+      addMessage({
+        senderId: 'admin',
+        senderName: 'המנהל',
+        recipientIds: [request.requesterId],
+        subject: 'דחיית בקשת החלפה',
+        content: rejectionMessage,
+        type: 'swap_rejection',
+      });
+    }
+    
     setRequests(getSwapRequests());
     syncManager.onUserAction('update');
     // Trigger automatic backup when swap request is processed

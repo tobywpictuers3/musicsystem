@@ -19,6 +19,7 @@ import SwapRequests from '@/components/admin/SwapRequests';
 import BackupImport from '@/components/admin/BackupImport';
 import BackupHistory from '@/components/admin/BackupHistory';
 import AdminPracticeStats from '@/components/admin/AdminPracticeStats';
+import MessagingTab from '@/components/admin/MessagingTab';
 
 import FixedScheduleTab from '@/components/admin/FixedScheduleTab';
 
@@ -43,6 +44,7 @@ const AdminDashboard = () => {
       performances: 'הופעות',
       swaps: 'בקשות החלפה',
       practice: 'נתוני אימונים',
+      messages: 'תקשורת',
       backup: 'גיבוי',
       history: 'היסטוריה'
     };
@@ -134,7 +136,7 @@ const AdminDashboard = () => {
 
           {/* Main Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-9 royal-card royal-shadow">
+            <TabsList className="grid w-full grid-cols-10 royal-card royal-shadow">
               <TabsTrigger value="students" className="flex items-center gap-2 royal-tab">
                 <Users className="h-4 w-4" />
                 תלמידות
@@ -162,6 +164,10 @@ const AdminDashboard = () => {
               <TabsTrigger value="practice" className="flex items-center gap-2 royal-tab">
                 <Trophy className="h-4 w-4" />
                 נתוני אימונים
+              </TabsTrigger>
+              <TabsTrigger value="messages" className="flex items-center gap-2 royal-tab">
+                <MessageSquare className="h-4 w-4" />
+                תקשורת
               </TabsTrigger>
               <TabsTrigger value="backup" className="flex items-center gap-2 royal-tab">
                 <FileText className="h-4 w-4" />
@@ -199,6 +205,10 @@ const AdminDashboard = () => {
 
             <TabsContent value="practice">
               <AdminPracticeStats />
+            </TabsContent>
+
+            <TabsContent value="messages">
+              <MessagingTab />
             </TabsContent>
 
             <TabsContent value="backup">

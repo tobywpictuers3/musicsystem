@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MessageSquare, Send } from 'lucide-react';
 import { getStudents, getLessons, addSwapRequest } from '@/lib/storage';
 import { toast } from '@/hooks/use-toast';
+import { addMessage } from '@/lib/messages';
 
 interface SwapRequestFormProps {
   studentId: string;
@@ -56,6 +57,24 @@ const SwapRequestForm = ({ studentId }: SwapRequestFormProps) => {
       status: 'pending',
       createdAt: new Date().toISOString(),
     });
+
+    // Send swap request message to admin
+    const allStudents = getStudents();
+    const requester = allStudents.find(s => s.id === studentId);
+    const target = allStudents.find(s => s.id === targetStudentId);
+
+    if (requester && target) {
+      const messageContent = `בקשת החלפת שיעור חדשה\n\nמבקש: ${requester.firstName} ${requester.lastName}\nשיעור מקורי: ${selectedDate} בשעה ${selectedLesson.startTime}\n\nמבוקש להחליף עם: ${target.firstName} ${target.lastName}\n\nסיבה: ${reason.trim()}`;
+      
+      addMessage({
+        senderId: studentId,
+        senderName: `${requester.firstName} ${requester.lastName}`,
+        recipientIds: ['admin'],
+        subject: 'בקשת החלפת שיעור',
+        content: messageContent,
+        type: 'swap_request',
+      });
+    }
 
     // Reset form
     setSelectedDate('');
