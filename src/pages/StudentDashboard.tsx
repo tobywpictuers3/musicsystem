@@ -19,6 +19,8 @@ import PaymentAlert from '@/components/student/PaymentAlert';
 import PaymentSummary from '@/components/student/PaymentSummary';
 import LessonHistory from '@/components/student/LessonHistory';
 import PracticeTracking from '@/components/student/PracticeTracking';
+import MessagesView from '@/components/student/MessagesView';
+import MessageAlert from '@/components/student/MessageAlert';
 import MedalCollection from '@/components/student/MedalCollection';
 import MedalStore from '@/components/student/MedalStore';
 import BackButton from '@/components/ui/back-button';
@@ -161,7 +163,7 @@ const StudentDashboard = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7 bg-secondary/20 backdrop-blur">
+          <TabsList className="grid w-full grid-cols-8 bg-secondary/20 backdrop-blur">
             <TabsTrigger value="schedule" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary">
               <Calendar className="h-4 w-4" />
               מערכת שבועית
@@ -181,6 +183,10 @@ const StudentDashboard = () => {
             <TabsTrigger value="history" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
               <Calendar className="h-4 w-4" />
               היסטוריית שיעורים
+            </TabsTrigger>
+            <TabsTrigger value="messages" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
+              <Calendar className="h-4 w-4" />
+              תקשורת
             </TabsTrigger>
             <TabsTrigger value="details" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
               <User className="h-4 w-4" />
@@ -225,6 +231,14 @@ const StudentDashboard = () => {
 
           <TabsContent value="history" className="space-y-6">
             <LessonHistory student={student} />
+          </TabsContent>
+
+          <TabsContent value="messages" className="space-y-6">
+            <MessageAlert studentId={studentId!} />
+            <MessagesView 
+              studentId={studentId!} 
+              studentName={`${student?.firstName || ''} ${student?.lastName || ''}`}
+            />
           </TabsContent>
 
           <TabsContent value="details" className="space-y-6">
