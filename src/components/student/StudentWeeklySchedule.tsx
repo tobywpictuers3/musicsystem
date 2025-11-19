@@ -1,12 +1,9 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, ArrowRight, ArrowLeft, X } from 'lucide-react';
+import { Calendar, ArrowRight, ArrowLeft } from 'lucide-react';
 import { getLessons, getStudents } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import SwapRequestForm from './SwapRequestForm';
 import { Lesson } from '@/lib/types';
@@ -17,10 +14,8 @@ interface StudentWeeklyScheduleProps {
 
 const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
-  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
   const [swapFormOpen, setSwapFormOpen] = useState(false);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [personalCode, setPersonalCode] = useState('');
   
   const allLessons = getLessons();
   const lessons = allLessons.filter(lesson => 
@@ -86,23 +81,7 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
     }
 
     setSelectedLesson(lesson);
-    setVerificationDialogOpen(true);
-  };
-
-  const handleVerifyCode = () => {
-    if (!student || !selectedLesson) return;
-
-    if (personalCode.trim() === student.personalCode) {
-      setVerificationDialogOpen(false);
-      setSwapFormOpen(true);
-      setPersonalCode('');
-    } else {
-      toast({
-        title: 'קוד שגוי',
-        description: 'הקוד האישי שהוזן אינו תואם',
-        variant: 'destructive',
-      });
-    }
+    setSwapFormOpen(true);
   };
 
   const handleCloseSwapForm = () => {
@@ -217,62 +196,15 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
         </CardContent>
       </Card>
 
-      {/* Verification Dialog */}
-      <Dialog open={verificationDialogOpen} onOpenChange={setVerificationDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>אימות קוד אישי</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedLesson && (
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <p className="text-sm">
-                  <strong>שיעור נבחר:</strong> {new Date(selectedLesson.date).toLocaleDateString('he-IL')} בשעה {selectedLesson.startTime}
-                </p>
-              </div>
-            )}
-            <div>
-              <Label htmlFor="personal-code">הזיני את הקוד האישי שלך</Label>
-              <Input
-                id="personal-code"
-                type="text"
-                value={personalCode}
-                onChange={(e) => setPersonalCode(e.target.value)}
-                placeholder="הקוד האישי"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleVerifyCode();
-                  }
-                }}
-              />
-            </div>
-            <Button onClick={handleVerifyCode} className="w-full">
-              המשך
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Swap Form at Bottom */}
+      {/* Swap Form Below Schedule */}
       {swapFormOpen && selectedLesson && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border shadow-lg max-h-[80vh] overflow-y-auto">
-          <div className="container mx-auto p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-semibold">בקשת החלפת שיעור</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCloseSwapForm}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <SwapRequestForm
-              studentId={studentId}
-              preSelectedLesson={selectedLesson}
-              onClose={handleCloseSwapForm}
-            />
-          </div>
+        <div className="mt-6">
+          <SwapRequestForm
+            studentId={studentId}
+            preSelectedLesson={selectedLesson}
+            onClose={handleCloseSwapForm}
+            requireVerification={true}
+          />
         </div>
       )}
     </>
@@ -280,4 +212,3 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
 };
 
 export default StudentWeeklySchedule;
-
