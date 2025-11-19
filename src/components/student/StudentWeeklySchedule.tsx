@@ -9,9 +9,10 @@ import { Lesson } from '@/lib/types';
 
 interface StudentWeeklyScheduleProps {
   studentId: string;
+  onLessonClick?: ((lesson: Lesson) => void) | null;
 }
 
-const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
+const StudentWeeklySchedule = ({ studentId, onLessonClick: externalOnLessonClick }: StudentWeeklyScheduleProps) => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [lessonSelectCallback, setLessonSelectCallback] = useState<((lesson: Lesson) => void) | null>(null);
   
@@ -68,9 +69,11 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
   };
 
   const handleLessonClick = (lesson: Lesson) => {
-    if (lessonSelectCallback) {
+    if (externalOnLessonClick) {
+      externalOnLessonClick(lesson);
+    } else if (lessonSelectCallback) {
       lessonSelectCallback(lesson);
-      setLessonSelectCallback(null); // Clear callback after selection
+      setLessonSelectCallback(null);
     }
   };
 
