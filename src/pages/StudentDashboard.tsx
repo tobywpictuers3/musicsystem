@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { Student } from '@/lib/types';
 import { useAccessMode } from '@/contexts/AccessModeContext';
 import StudentWeeklySchedule from '@/components/student/StudentWeeklySchedule';
+import StudentSwapPanel from '@/components/student/lessonSwap/StudentSwapPanel';
 import EditableStudentDetails from '@/components/student/EditableStudentDetails';
 import ContactsList from '@/components/student/ContactsList';
 import StudentFiles from '@/components/student/StudentFiles';
@@ -31,6 +32,7 @@ const StudentDashboard = () => {
   const [activeTab, setActiveTab] = useState('schedule');
   const [student, setStudent] = useState<Student | null>(null);
   const { isPublicMode, setAccessMode } = useAccessMode();
+  const [selectedLessonHandler, setSelectedLessonHandler] = useState<((lesson: any) => void) | null>(null);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -216,7 +218,16 @@ const StudentDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              <StudentWeeklySchedule studentId={studentId!} />
+              <>
+                <StudentWeeklySchedule 
+                  studentId={studentId!} 
+                  onLessonClick={selectedLessonHandler}
+                />
+                <StudentSwapPanel 
+                  studentId={studentId!}
+                  onLessonClick={(handler) => setSelectedLessonHandler(() => handler)}
+                />
+              </>
             )}
           </TabsContent>
 
