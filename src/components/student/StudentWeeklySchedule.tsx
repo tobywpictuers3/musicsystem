@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, ArrowRight, ArrowLeft } from 'lucide-react';
-import { getLessons, getStudents } from '@/lib/storage';
+import { getLessons, getStudents, getCurrentUser } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
 import StudentSwapPanel from './lessonSwap/StudentSwapPanel';
 import { Lesson } from '@/lib/types';
@@ -70,6 +70,7 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
   const handleLessonClick = (lesson: Lesson) => {
     if (lessonSelectCallback) {
       lessonSelectCallback(lesson);
+      setLessonSelectCallback(null); // Clear callback after selection
     }
   };
 
@@ -98,14 +99,16 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
   };
 
   const isLessonSwapped = (lesson: Lesson): boolean => {
-    // Check if this lesson was swapped by looking at all lessons
-    // A lesson is considered swapped if there's evidence it was moved from another student
-    return lesson.notes?.includes('הוחלף') || false;
+    return lesson.isSwapped || lesson.notes?.includes('הוחלף') || false;
   };
 
   if (!student) {
     return <div>תלמידה לא נמצאה</div>;
   }
+
+  // Check if current user is admin - don't show swap panel for admin view
+  const currentUser = getCurrentUser();
+  const isAdminView = currentUser?.type === 'admin' || currentUser?.type === 'dev_admin';
 
   return (
     <>
@@ -197,10 +200,12 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
         </CardContent>
       </Card>
 
-      <StudentSwapPanel 
-        studentId={studentId}
-        onLessonClick={handleRegisterCallback}
-      />
+      {!isAdminView && (
+        <StudentSwapPanel 
+          studentId={studentId}
+          onLessonClick={handleRegisterCallback}
+        />
+      )}
     </>
   );
 };
