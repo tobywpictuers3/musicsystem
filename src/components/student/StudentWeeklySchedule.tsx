@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Calendar, ArrowRight, ArrowLeft, X } from 'lucide-react';
 import { getLessons, getStudents } from '@/lib/storage';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { toast } from '@/hooks/use-toast';
+import SwapRequestForm from './SwapRequestForm';
+import { Lesson } from '@/lib/types';
 
 interface StudentWeeklyScheduleProps {
   studentId: string;
@@ -11,6 +17,11 @@ interface StudentWeeklyScheduleProps {
 
 const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
+  const [swapFormOpen, setSwapFormOpen] = useState(false);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [personalCode, setPersonalCode] = useState('');
+  
   const allLessons = getLessons();
   const lessons = allLessons.filter(lesson => 
     lesson.studentId === studentId && 
@@ -63,6 +74,42 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
     setCurrentWeek(nextWeek);
   };
 
+  const handleLessonDoubleClick = (lesson: Lesson) => {
+    // Only allow swapping of future scheduled lessons
+    if (lesson.status !== 'scheduled' || lesson.date < new Date().toISOString().split('T')[0]) {
+      toast({
+        title: 'לא ניתן להחליף',
+        description: 'ניתן להחליף רק שיעורים עתידיים מתוכננים',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSelectedLesson(lesson);
+    setVerificationDialogOpen(true);
+  };
+
+  const handleVerifyCode = () => {
+    if (!student || !selectedLesson) return;
+
+    if (personalCode.trim() === student.personalCode) {
+      setVerificationDialogOpen(false);
+      setSwapFormOpen(true);
+      setPersonalCode('');
+    } else {
+      toast({
+        title: 'קוד שגוי',
+        description: 'הקוד האישי שהוזן אינו תואם',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCloseSwapForm = () => {
+    setSwapFormOpen(false);
+    setSelectedLesson(null);
+  };
+
   const getStatusBadge = (status: string) => {
     const variants = {
       scheduled: 'secondary',
@@ -84,118 +131,153 @@ const StudentWeeklySchedule = ({ studentId }: StudentWeeklyScheduleProps) => {
   }
 
   return (
-    <Card className="card-gradient card-shadow">
-      <CardHeader>
-        <CardTitle className="text-2xl flex items-center gap-2">
-          <Calendar className="h-6 w-6" />
-          המערכת השבועית שלי
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* Week Navigation */}
-        <div className="flex justify-between items-center mb-6">
-          <Button onClick={handlePrevWeek} variant="outline" size="sm">
-            <ArrowRight className="h-4 w-4" />
-            שבוע קודם
-          </Button>
-          <h3 className="text-lg font-semibold">
-            {weekDates[0].toLocaleDateString('he-IL')} - {weekDates[6].toLocaleDateString('he-IL')}
-          </h3>
-          <Button onClick={handleNextWeek} variant="outline" size="sm">
-            שבוע הבא
-            <ArrowLeft className="h-4 w-4 mr-2" />
-          </Button>
-        </div>
+    <>
+      <Card className="card-gradient card-shadow">
+        <CardHeader>
+          <CardTitle className="text-2xl flex items-center gap-2">
+            <Calendar className="h-6 w-6" />
+            המערכת השבועית שלי
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Week Navigation */}
+          <div className="flex justify-between items-center mb-6">
+            <Button onClick={handleNextWeek} variant="outline" size="sm">
+              שבוע הבא
+              <ArrowLeft className="h-4 w-4 mr-2" />
+            </Button>
+            <h3 className="text-lg font-semibold">
+              {weekDates[0].toLocaleDateString('he-IL')} - {weekDates[6].toLocaleDateString('he-IL')}
+            </h3>
+            <Button onClick={handlePrevWeek} variant="outline" size="sm">
+              <ArrowRight className="h-4 w-4" />
+              שבוע קודם
+            </Button>
+          </div>
 
-        {/* Weekly Schedule Table */}
-        <div className="space-y-4">
-          {weekDates.map((date, index) => {
-            const dayLessons = getLessonsForDay(date);
-            const today = new Date().toISOString().split('T')[0];
-            const dateStr = date.toISOString().split('T')[0];
-            const isFutureDay = dateStr >= today;
+          {/* Weekly Schedule Table */}
+          <div className="space-y-4">
+            {weekDates.map((date, index) => {
+              const dayLessons = getLessonsForDay(date);
+              const today = new Date().toISOString().split('T')[0];
+              const dateStr = date.toISOString().split('T')[0];
+              const isToday = dateStr === today;
 
-            if (dayLessons.length === 0) return null;
-
-            return (
-              <div key={date.toISOString()} className={`p-4 rounded-lg ${
-                isFutureDay ? 'bg-primary/5 border-2 border-primary/20' : 'bg-secondary/30'
-              }`}>
-                <div className="flex justify-between items-center mb-3">
-                  <div className="font-semibold text-lg flex items-center gap-2">
-                    {dayNames[index]} - {date.toLocaleDateString('he-IL')}
-                    {isFutureDay && (
-                      <Badge variant="outline" className="text-xs">
-                        קרוב
-                      </Badge>
-                    )}
+              return (
+                <div
+                  key={index}
+                  className={`p-4 rounded-lg border ${
+                    isToday ? 'border-primary bg-primary/5' : 'border-border bg-card'
+                  }`}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold text-lg">
+                      {dayNames[index]} - {date.toLocaleDateString('he-IL')}
+                      {isToday && <span className="mr-2 text-primary">(היום)</span>}
+                    </h4>
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  {dayLessons.map((lesson) => {
-                      const currentDate = new Date().toISOString().split('T')[0];
-                      const isFuture = lesson.date >= currentDate;
-                      const isCompleted = lesson.status === 'completed';
-                      const isCancelled = lesson.status === 'cancelled';
-                      
-                      return (
+
+                  {dayLessons.length > 0 ? (
+                    <div className="space-y-2">
+                      {dayLessons.map((lesson) => (
                         <div
                           key={lesson.id}
-                          className={`flex justify-between items-center p-3 border rounded-lg transition-all ${
-                            isFuture 
-                              ? 'bg-gradient-to-r from-primary/10 to-primary/5 border-primary/30 shadow-sm' 
-                              : isCompleted 
-                                ? 'bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800' 
-                                : isCancelled
-                                  ? 'bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800'
-                                  : 'bg-muted/50 border-muted'
-                          }`}
+                          onDoubleClick={() => handleLessonDoubleClick(lesson)}
+                          className="p-3 bg-muted/50 rounded-lg flex justify-between items-center hover:bg-muted cursor-pointer transition-colors"
+                          title="לחיצה כפולה להחלפת שיעור"
                         >
-                          <div className="space-y-1">
-                            <div className={`font-medium ${isFuture ? 'text-primary' : ''}`}>
+                          <div className="flex items-center gap-4">
+                            <span className="font-medium">
                               {lesson.startTime} - {lesson.endTime}
-                            </div>
+                            </span>
                             {lesson.notes && (
-                              <div className="text-sm text-muted-foreground">
-                                {lesson.notes}
-                              </div>
+                              <span className="text-sm text-muted-foreground">{lesson.notes}</span>
                             )}
                           </div>
-                          <div className="flex gap-2">
-                            {lesson.isOneOff && (
-                              <Badge variant="outline" className="text-xs">
-                                חד פעמי
-                              </Badge>
-                            )}
-                            {getStatusBadge(lesson.status)}
-                          </div>
+                          {getStatusBadge(lesson.status)}
                         </div>
-                      );
-                    })}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-2">אין שיעורים</p>
+                  )}
                 </div>
+              );
+            })}
+          </div>
+
+          {/* Student Info Summary */}
+          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <strong>תאריך התחלה:</strong> {new Date(student.startDate).toLocaleDateString('he-IL')}
               </div>
-            );
-          })}
-
-          {weekDates.every(date => getLessonsForDay(date).length === 0) && (
-            <div className="text-center py-8 text-muted-foreground">
-              אין שיעורים מתוכננים השבוע
-            </div>
-          )}
-        </div>
-
-        {/* Student Info Summary */}
-        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <strong>תאריך התחלה:</strong> {new Date(student.startDate).toLocaleDateString('he-IL')}
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Verification Dialog */}
+      <Dialog open={verificationDialogOpen} onOpenChange={setVerificationDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>אימות קוד אישי</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedLesson && (
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <p className="text-sm">
+                  <strong>שיעור נבחר:</strong> {new Date(selectedLesson.date).toLocaleDateString('he-IL')} בשעה {selectedLesson.startTime}
+                </p>
+              </div>
+            )}
+            <div>
+              <Label htmlFor="personal-code">הזיני את הקוד האישי שלך</Label>
+              <Input
+                id="personal-code"
+                type="text"
+                value={personalCode}
+                onChange={(e) => setPersonalCode(e.target.value)}
+                placeholder="הקוד האישי"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleVerifyCode();
+                  }
+                }}
+              />
+            </div>
+            <Button onClick={handleVerifyCode} className="w-full">
+              המשך
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Swap Form at Bottom */}
+      {swapFormOpen && selectedLesson && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border shadow-lg max-h-[80vh] overflow-y-auto">
+          <div className="container mx-auto p-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold">בקשת החלפת שיעור</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseSwapForm}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <SwapRequestForm
+              studentId={studentId}
+              preSelectedLesson={selectedLesson}
+              onClose={handleCloseSwapForm}
+            />
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </>
   );
 };
 
 export default StudentWeeklySchedule;
+

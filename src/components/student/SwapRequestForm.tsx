@@ -7,18 +7,24 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, Send } from 'lucide-react';
-import { getStudents, getLessons, addSwapRequest } from '@/lib/storage';
+import { getStudents, getLessons, addSwapRequest, updateLesson } from '@/lib/storage';
 import { toast } from '@/hooks/use-toast';
 import { addMessage } from '@/lib/messages';
+import { Lesson } from '@/lib/types';
 
 interface SwapRequestFormProps {
   studentId: string;
+  preSelectedLesson?: Lesson;
+  onClose?: () => void;
 }
 
-const SwapRequestForm = ({ studentId }: SwapRequestFormProps) => {
-  const [selectedDate, setSelectedDate] = useState('');
+const SwapRequestForm = ({ studentId, preSelectedLesson, onClose }: SwapRequestFormProps) => {
+  const [selectedDate, setSelectedDate] = useState(preSelectedLesson?.date || '');
   const [targetStudentId, setTargetStudentId] = useState('');
+  const [targetLessonDate, setTargetLessonDate] = useState('');
+  const [targetLessonTime, setTargetLessonTime] = useState('');
   const [reason, setReason] = useState('');
+  const [swapCode, setSwapCode] = useState('');
   
   const students = getStudents().filter(s => s.id !== studentId);
   const lessons = getLessons().filter(l => l.studentId === studentId);
@@ -28,7 +34,7 @@ const SwapRequestForm = ({ studentId }: SwapRequestFormProps) => {
   const upcomingLessons = lessons.filter(l => l.date >= today && l.status === 'scheduled');
 
   const handleSubmitRequest = () => {
-    if (!selectedDate || !targetStudentId || !reason.trim()) {
+    if (!selectedDate || !targetStudentId || !targetLessonDate || !targetLessonTime || !reason.trim()) {
       toast({
         title: 'שגיאה',
         description: 'יש למלא את כל השדות',
@@ -37,7 +43,6 @@ const SwapRequestForm = ({ studentId }: SwapRequestFormProps) => {
       return;
     }
 
-    // Get the lesson time from the selected lesson
     const selectedLesson = upcomingLessons.find(l => l.date === selectedDate);
     if (!selectedLesson) {
       toast({
@@ -48,23 +53,88 @@ const SwapRequestForm = ({ studentId }: SwapRequestFormProps) => {
       return;
     }
 
-    addSwapRequest({
-      requesterId: studentId,
-      targetId: targetStudentId,
-      date: selectedDate,
-      time: selectedLesson.startTime,
-      reason: reason.trim(),
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-    });
-
-    // Send swap request message to admin
     const allStudents = getStudents();
     const requester = allStudents.find(s => s.id === studentId);
-    const target = allStudents.find(s => s.id === targetStudentId);
+    const targetStudent = allStudents.find(s => s.id === targetStudentId);
 
-    if (requester && target) {
-      const messageContent = `בקשת החלפת שיעור חדשה\n\nמבקש: ${requester.firstName} ${requester.lastName}\nשיעור מקורי: ${selectedDate} בשעה ${selectedLesson.startTime}\n\nמבוקש להחליף עם: ${target.firstName} ${target.lastName}\n\nסיבה: ${reason.trim()}`;
+    if (!requester || !targetStudent) {
+      toast({
+        title: 'שגיאה',
+        description: 'תלמידה לא נמצאה',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if swap code was provided and matches target student's swap code
+    const targetSwapCode = targetStudent.swapCode || targetStudent.personalCode;
+    const isAutoApproved = swapCode.trim() && swapCode.trim() === targetSwapCode;
+
+    if (isAutoApproved) {
+      // Perform automatic swap
+      const targetLessons = getLessons().filter(l => l.studentId === targetStudentId);
+      const targetLesson = targetLessons.find(l => l.date === targetLessonDate && l.startTime === targetLessonTime);
+
+      if (targetLesson) {
+        // Swap the lessons
+        updateLesson(selectedLesson.id, { studentId: targetStudentId });
+        updateLesson(targetLesson.id, { studentId: studentId });
+
+        // Send confirmation message to requester
+        addMessage({
+          senderId: 'admin',
+          senderName: 'המערכת',
+          recipientIds: [studentId],
+          subject: 'החלפת שיעור אושרה',
+          content: `החלפת השיעור בוצעה בהצלחה!\n\nהשיעור שלך מתאריך ${selectedDate} בשעה ${selectedLesson.startTime}\nהוחלף עם השיעור של ${targetStudent.firstName} ${targetStudent.lastName}\nמתאריך ${targetLessonDate} בשעה ${targetLessonTime}`,
+          type: 'system',
+        });
+
+        // Send confirmation message to target student
+        addMessage({
+          senderId: 'admin',
+          senderName: 'המערכת',
+          recipientIds: [targetStudentId],
+          subject: 'החלפת שיעור בוצעה',
+          content: `השיעור שלך הוחלף!\n\n${requester.firstName} ${requester.lastName} החליפה עם השיעור שלך מתאריך ${targetLessonDate} בשעה ${targetLessonTime}\nבאמצעות השיעור שלה מתאריך ${selectedDate} בשעה ${selectedLesson.startTime}\n\nסיבה: ${reason.trim()}`,
+          type: 'system',
+        });
+
+        // Send report to admin
+        addMessage({
+          senderId: 'system',
+          senderName: 'המערכת',
+          recipientIds: ['admin'],
+          subject: 'דיווח על החלפת שיעור אוטומטית',
+          content: `החלפת שיעור בוצעה אוטומטית:\n\n${requester.firstName} ${requester.lastName}\nשיעור מקורי: ${selectedDate} בשעה ${selectedLesson.startTime}\n\nהוחלף עם: ${targetStudent.firstName} ${targetStudent.lastName}\nשיעור: ${targetLessonDate} בשעה ${targetLessonTime}\n\nסיבה: ${reason.trim()}`,
+          type: 'system',
+        });
+
+        toast({
+          title: 'ההחלפה בוצעה בהצלחה!',
+          description: 'השיעורים הוחלפו והודעות נשלחו לכולן',
+        });
+      } else {
+        toast({
+          title: 'שגיאה',
+          description: 'השיעור המבוקש להחלפה לא נמצא',
+          variant: 'destructive',
+        });
+        return;
+      }
+    } else {
+      // Send swap request to admin for approval
+      addSwapRequest({
+        requesterId: studentId,
+        targetId: targetStudentId,
+        date: selectedDate,
+        time: selectedLesson.startTime,
+        reason: reason.trim(),
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+      });
+
+      const messageContent = `בקשת החלפת שיעור חדשה\n\nמבקש: ${requester.firstName} ${requester.lastName}\nשיעור מקורי: ${selectedDate} בשעה ${selectedLesson.startTime}\n\nמבוקש להחליף עם: ${targetStudent.firstName} ${targetStudent.lastName}\nשיעור מבוקש: ${targetLessonDate} בשעה ${targetLessonTime}\n\nסיבה: ${reason.trim()}`;
       
       addMessage({
         senderId: studentId,
@@ -74,28 +144,40 @@ const SwapRequestForm = ({ studentId }: SwapRequestFormProps) => {
         content: messageContent,
         type: 'swap_request',
       });
+
+      toast({
+        title: 'הבקשה נשלחה בהצלחה',
+        description: 'הבקשה נשלחה למנהלת לאישור',
+      });
     }
 
     // Reset form
     setSelectedDate('');
     setTargetStudentId('');
+    setTargetLessonDate('');
+    setTargetLessonTime('');
     setReason('');
-
-    toast({
-      title: 'הבקשה נשלחה בהצלחה',
-      description: 'הבקשה נשלחה למנהלת לאישור',
-    });
-  };
-
-  const getStudentName = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student ? `${student.firstName} ${student.lastName}` : '';
+    setSwapCode('');
+    
+    if (onClose) {
+      onClose();
+    }
   };
 
   const formatLessonOption = (lesson: any) => {
     const date = new Date(lesson.date).toLocaleDateString('he-IL');
     return `${date} - ${lesson.startTime}`;
   };
+
+  const handleTargetLessonDoubleClick = (lesson: Lesson) => {
+    setTargetLessonDate(lesson.date);
+    setTargetLessonTime(lesson.startTime);
+  };
+
+  // Get target student's lessons if a target is selected
+  const targetStudentLessons = targetStudentId 
+    ? getLessons().filter(l => l.studentId === targetStudentId && l.status === 'scheduled' && l.date >= new Date().toISOString().split('T')[0])
+    : [];
 
   return (
     <Card className="card-gradient card-shadow">
@@ -146,6 +228,43 @@ const SwapRequestForm = ({ studentId }: SwapRequestFormProps) => {
             </Select>
           </div>
 
+          {targetStudentId && targetStudentLessons.length > 0 && (
+            <div className="p-4 bg-muted/30 rounded-lg">
+              <Label className="mb-2 block">לחיצה כפולה על השיעור המבוקש להחלפה:</Label>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {targetStudentLessons.map((lesson) => (
+                  <div
+                    key={lesson.id}
+                    onDoubleClick={() => handleTargetLessonDoubleClick(lesson)}
+                    className="p-2 bg-background rounded border border-border hover:bg-accent cursor-pointer transition-colors"
+                  >
+                    {formatLessonOption(lesson)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <Label htmlFor="target-date">תאריך השיעור המבוקש להחלפה</Label>
+            <Input
+              id="target-date"
+              type="date"
+              value={targetLessonDate}
+              onChange={(e) => setTargetLessonDate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="target-time">שעת השיעור המבוקש להחלפה</Label>
+            <Input
+              id="target-time"
+              type="time"
+              value={targetLessonTime}
+              onChange={(e) => setTargetLessonTime(e.target.value)}
+            />
+          </div>
+
           <div>
             <Label htmlFor="reason">סיבת החלפה</Label>
             <Textarea
@@ -155,6 +274,21 @@ const SwapRequestForm = ({ studentId }: SwapRequestFormProps) => {
               placeholder="אנא פרטי את הסיבה להחלפה (למשל: אירוע משפחתי, בחינה, וכו')"
               rows={4}
             />
+          </div>
+
+          <div>
+            <Label htmlFor="swap-code">קוד החלפה (אופציונלי - למינוי אוטומטי)</Label>
+            <Input
+              id="swap-code"
+              type="text"
+              value={swapCode}
+              onChange={(e) => setSwapCode(e.target.value)}
+              placeholder="הזיני את קוד ההחלפה של התלמידה"
+              maxLength={10}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              אם תזיני את קוד ההחלפה הנכון, ההחלפה תתבצע אוטומטית ללא אישור מנהל
+            </p>
           </div>
 
           <Button 
