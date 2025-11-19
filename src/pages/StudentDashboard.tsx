@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { Student } from '@/lib/types';
 import { useAccessMode } from '@/contexts/AccessModeContext';
 import GeneralWeeklySchedule from '@/components/student/GeneralWeeklySchedule';
+import StudentWeeklySchedule from '@/components/student/StudentWeeklySchedule';
 import SwapRequestForm from '@/components/student/SwapRequestForm';
 import SwapRequestsStatus from '@/components/student/SwapRequestsStatus';
 import EditableStudentDetails from '@/components/student/EditableStudentDetails';
@@ -32,6 +33,7 @@ const StudentDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('schedule');
   const [student, setStudent] = useState<Student | null>(null);
+  const [selectedLessonForSwap, setSelectedLessonForSwap] = useState<any>(null);
   const { isPublicMode, setAccessMode } = useAccessMode();
 
   useEffect(() => {
@@ -167,18 +169,22 @@ const StudentDashboard = () => {
 
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-8 bg-secondary/20 backdrop-blur">
+          <TabsList className="grid w-full grid-cols-9 bg-secondary/20 backdrop-blur">
             <TabsTrigger value="schedule" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary">
               <Calendar className="h-4 w-4" />
-              מערכת שבועית
+              מערכת
+            </TabsTrigger>
+            <TabsTrigger value="swap" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
+              <Calendar className="h-4 w-4" />
+              החלפות
             </TabsTrigger>
             <TabsTrigger value="practice" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary">
               <Calendar className="h-4 w-4" />
-              מעקב אימונים
+              אימונים
             </TabsTrigger>
             <TabsTrigger value="medals" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary">
               <Calendar className="h-4 w-4" />
-              🏆 המדליות שלי
+              🏆 מדליות
             </TabsTrigger>
             <TabsTrigger value="store" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary">
               <Calendar className="h-4 w-4" />
@@ -186,7 +192,7 @@ const StudentDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="history" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
               <Calendar className="h-4 w-4" />
-              היסטוריית שיעורים
+              היסטוריה
             </TabsTrigger>
             <TabsTrigger value="messages" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
               <Calendar className="h-4 w-4" />
@@ -194,15 +200,15 @@ const StudentDashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="details" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
               <User className="h-4 w-4" />
-              הפרטים שלי
+              פרטים
             </TabsTrigger>
             <TabsTrigger value="contacts" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
               <Phone className="h-4 w-4" />
-              פרטי קשר
+              קשר
             </TabsTrigger>
             <TabsTrigger value="files" className="flex items-center gap-2 text-card-foreground data-[state=active]:text-primary" disabled={isPublicMode}>
               <FileText className="h-4 w-4" />
-              קבצים אישיים
+              קבצים
             </TabsTrigger>
           </TabsList>
 
@@ -217,8 +223,26 @@ const StudentDashboard = () => {
                 </CardContent>
               </Card>
             ) : (
-              <GeneralWeeklySchedule />
+              <>
+                <StudentWeeklySchedule 
+                  studentId={studentId!} 
+                  onLessonDoubleClick={(lesson) => {
+                    setSelectedLessonForSwap(lesson);
+                    setActiveTab('swap');
+                  }}
+                />
+                <GeneralWeeklySchedule />
+                <SwapRequestsStatus studentId={studentId!} />
+              </>
             )}
+          </TabsContent>
+
+          <TabsContent value="swap" className="space-y-6">
+            <SwapRequestForm 
+              studentId={studentId!}
+              prefilledLesson={selectedLessonForSwap || undefined}
+            />
+            <SwapRequestsStatus studentId={studentId!} />
           </TabsContent>
 
           <TabsContent value="practice" className="space-y-6">
